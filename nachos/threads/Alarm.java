@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.*;
 
 /**
  * Uses the hardware timer to provide preemption, and to allow threads to sleep
@@ -15,6 +16,8 @@ public class Alarm {
 	 * <b>Note</b>: Nachos will not function correctly with more than one alarm.
 	 */
 	public Alarm() {
+        waitUntilQueue = new PriorityQueue<>();
+        wakeUpMap = new HashMap<>();
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -29,7 +32,13 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
-		KThread.currentThread().yield();
+        while(waitUntilQueue.size()>0 && waitUntilQueue.peek() <= Machine.timer().getTime()){
+            long cur = waitUntilQueue.poll();
+            for(KThread t: wakeUpMap.get(cur))
+                t.ready();
+            wakeUpMap.remove(cur);
+        }
+		KThread.yield();
 	}
 
 	/**
@@ -45,10 +54,13 @@ public class Alarm {
 	 * @see nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
-		// for now, cheat just to get something working (busy waiting is bad)
 		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
+        if(!waitUntilQueue.contains(wakeTime))
+            waitUntilQueue.add(wakeTime);
+            wakeUpMap.put(wakeTime, new HashSet<>());
+        wakeUpMap.get(wakeTime).add(KThread.currentThread());
+		Machine.interrupt().disable();
+        KThread.sleep();
 	}
 
         /**
@@ -63,4 +75,21 @@ public class Alarm {
         public boolean cancel(KThread thread) {
 		return false;
 	}
+    public static void alarmTest1() {
+        int durations[] = {1*1000000, 2*1000000, 3*1000000, 4*1000000};
+        long t0, t1;
+        for (int d : durations) {
+            t0 = Machine.timer().getTime();
+            ThreadedKernel.alarm.waitUntil (d);
+            t1 = Machine.timer().getTime();
+            System.out.println ("alarmTest1: waited for " + (t1 - t0) + " ticks");
+        }
+    }
+
+    public static void selfTest() {
+        alarmTest1();
+    }
+
+    private static PriorityQueue<Long> waitUntilQueue = null;
+    private static HashMap<Long, HashSet<KThread>> wakeUpMap = null;
 }
