@@ -7,7 +7,7 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 |Jiale Xu|A15123298|jix012@ucsd.edu|
 ## TODO
 - [x] Alarm.waitUntil - Yuxiang
-- [ ] KThread.join
+- [x] KThread.join - Yuxiang
 - [ ] Condition2.{sleep, wake, wakeAll}
 - [ ] Alarm.cancel, Condition2.sleepFor
 - [ ] Rendezvous.exchange
