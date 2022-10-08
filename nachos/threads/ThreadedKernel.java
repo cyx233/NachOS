@@ -50,6 +50,7 @@ public class ThreadedKernel extends Kernel {
 		Semaphore.selfTest();
 		SynchList.selfTest();
         Alarm.selfTest();
+        Condition2.selfTest();
 		if (Machine.bank() != null) {
 			ElevatorBank.selfTest();
 		}
@@ -93,7 +94,7 @@ public class ThreadedKernel extends Kernel {
 
 	private static ElevatorController dummy7 = null;
 
-        private static GameMatch dummy8 = null;
+    private static GameMatch dummy8 = null;
 
-        private static Future dummy9 = null;
+    private static Future dummy9 = null;
 }

@@ -91,6 +91,6 @@ public class Alarm {
         alarmTest1();
     }
 
-    private static PriorityQueue<Long> waitUntilQueue = null;
-    private static HashMap<Long, HashSet<KThread>> wakeUpMap = null;
+    private PriorityQueue<Long> waitUntilQueue = null;
+    private HashMap<Long, HashSet<KThread>> wakeUpMap = null;
 }

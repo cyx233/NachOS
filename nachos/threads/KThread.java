@@ -292,6 +292,7 @@ public class KThread {
             boolean intStatus = Machine.interrupt().disable();
             joinThread = currentThread;
             KThread.sleep();
+            joinThread = null;
             Machine.interrupt().restore(intStatus);
         }
 	}
