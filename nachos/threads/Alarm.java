@@ -16,8 +16,7 @@ public class Alarm {
 	 * <b>Note</b>: Nachos will not function correctly with more than one alarm.
 	 */
 	public Alarm() {
-        waitUntilQueue = new PriorityQueue<>();
-        wakeUpMap = new HashMap<>();
+        wakeUpTimeMap = new HashMap<>();
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() {
 				timerInterrupt();
@@ -32,11 +31,13 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
-        while(waitUntilQueue.size()>0 && waitUntilQueue.peek() <= Machine.timer().getTime()){
-            long cur = waitUntilQueue.poll();
-            for(KThread t: wakeUpMap.get(cur))
-                t.ready();
-            wakeUpMap.remove(cur);
+        Iterator<Map.Entry<KThread, Long>> it =  wakeUpTimeMap.entrySet().iterator();
+        while(it.hasNext()){
+            Map.Entry<KThread, Long> record = it.next();
+            if(record.getValue() <= Machine.timer().getTime()){
+                record.getKey().ready();
+                it.remove();
+            }
         }
 		KThread.yield();
 	}
@@ -55,10 +56,7 @@ public class Alarm {
 	 */
 	public void waitUntil(long x) {
 		long wakeTime = Machine.timer().getTime() + x;
-        if(!waitUntilQueue.contains(wakeTime))
-            waitUntilQueue.add(wakeTime);
-            wakeUpMap.put(wakeTime, new HashSet<>());
-        wakeUpMap.get(wakeTime).add(KThread.currentThread());
+        wakeUpTimeMap.put(KThread.currentThread(), wakeTime);
 		boolean intStatus = Machine.interrupt().disable();
         KThread.sleep();
 		Machine.interrupt().restore(intStatus);
@@ -73,8 +71,8 @@ public class Alarm {
 	 * <p>
 	 * @param thread the thread whose timer should be cancelled.
 	 */
-        public boolean cancel(KThread thread) {
-		return false;
+    public boolean cancel(KThread thread) {
+        return wakeUpTimeMap.remove(thread) != null;
 	}
     public static void alarmTest1() {
         int durations[] = {1*1000000, 2*1000000, 3*1000000, 4*1000000};
@@ -91,6 +89,5 @@ public class Alarm {
         alarmTest1();
     }
 
-    private PriorityQueue<Long> waitUntilQueue = null;
-    private HashMap<Long, HashSet<KThread>> wakeUpMap = null;
+    private HashMap<KThread, Long> wakeUpTimeMap = null;
 }

@@ -53,8 +53,11 @@ public class Condition2 {
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
         boolean intStatus = Machine.interrupt().disable();
-		if (!waitQueue.isEmpty())
-			waitQueue.removeFirst().ready();
+        if (!waitQueue.isEmpty()){
+            KThread t = waitQueue.removeFirst();
+            t.ready();
+            ThreadedKernel.alarm.cancel(t);
+        }
         Machine.interrupt().restore(intStatus);
 	}
 
@@ -65,8 +68,11 @@ public class Condition2 {
 	public void wakeAll() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
         boolean intStatus = Machine.interrupt().disable();
-		while (!waitQueue.isEmpty())
-			waitQueue.removeFirst().ready();
+        while (!waitQueue.isEmpty()){
+			KThread t = waitQueue.removeFirst();
+            t.ready();
+            ThreadedKernel.alarm.cancel(t);
+        }
         Machine.interrupt().restore(intStatus);
 	}
 
@@ -80,6 +86,17 @@ public class Condition2 {
 	 */
     public void sleepFor(long timeout) {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+
+        waitQueue.add(KThread.currentThread());
+
+		boolean intStatus = Machine.interrupt().disable();
+
+		conditionLock.release();
+        ThreadedKernel.alarm.waitUntil(timeout);
+
+        Machine.interrupt().restore(intStatus);
+
+		conditionLock.acquire();
 	}
 
     private static class InterlockTest {
@@ -121,20 +138,20 @@ public class Condition2 {
         final Condition2 empty = new Condition2(lock);
         final LinkedList<Integer> list = new LinkedList<>();
 
-        KThread consumer = new KThread( new Runnable () {
+        KThread consumer = new KThread(new Runnable() {
             public void run() {
                 lock.acquire();
                 while(list.isEmpty()){
-                empty.sleep();
+                    empty.sleep();
+                }
+                Lib.assertTrue(list.size() == 5, "List should have 5 values.");
+                while(!list.isEmpty()) {
+                    KThread.yield();
+                    System.out.println("Removed " + list.removeFirst());
+                }
+                lock.release();
             }
-            Lib.assertTrue(list.size() == 5, "List should have 5 values.");
-            while(!list.isEmpty()) {
-                KThread.yield();
-                System.out.println("Removed " + list.removeFirst());
-            }
-            lock.release();
-            }
-        } );
+        });
 
         KThread producer = new KThread( new Runnable () {
             public void run() {
@@ -147,8 +164,8 @@ public class Condition2 {
                 empty.wake();
                 lock.release();
             }
-
         } );
+
         consumer.setName("Consumer");
         producer.setName("Producer");
         consumer.fork();
@@ -158,9 +175,24 @@ public class Condition2 {
         producer.join();
     }
 
+    private static void sleepForTest1 () {
+        Lock lock = new Lock();
+        Condition2 cv = new Condition2(lock);
+
+        lock.acquire();
+        long t0 = Machine.timer().getTime();
+        System.out.println (KThread.currentThread().getName() + " sleeping");
+        cv.sleepFor(2000);
+        long t1 = Machine.timer().getTime();
+        System.out.println (KThread.currentThread().getName() +
+                " woke up, slept for " + (t1 - t0) + " ticks");
+        lock.release();
+    }
+
     public static void selfTest() {
         new InterlockTest();
         cvTest5();
+        sleepForTest1();
     }
 
     private Lock conditionLock;
