@@ -202,8 +202,8 @@ public class KThread {
 		toBeDestroyed = currentThread;
 
 		currentThread.status = statusFinished;
-        if(joinThread != null)
-            joinThread.ready();
+        if(currentThread.joinThread != null)
+            currentThread.joinThread.ready();
 		KThread.sleep();
 	}
 
@@ -497,5 +497,5 @@ public class KThread {
 
 	private static KThread idleThread = null;
 
-	private static KThread joinThread = null;
+	private KThread joinThread = null;
 }

@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.HashMap;
 
 /**
  * A <i>Rendezvous</i> allows threads to synchronously exchange values.
@@ -10,6 +11,9 @@ public class Rendezvous {
      * Allocate a new Rendezvous.
      */
     public Rendezvous () {
+        lock = new Lock();
+        exchangeMap = new HashMap<Integer, Integer>();
+        conditionMap = new HashMap<Integer, Condition2>();
     }
 
     /**
@@ -29,6 +33,73 @@ public class Rendezvous {
      * @param value the integer to exchange.
      */
     public int exchange (int tag, int value) {
-	return 0;
+        lock.acquire();
+        if(exchangeMap.containsKey(tag)){
+            int r = exchangeMap.get(tag);
+            exchangeMap.put(tag, value);
+            conditionMap.get(tag).wake();
+
+            lock.release();
+            return r;
+        }
+        else{
+            Condition2 cv = new Condition2(lock);
+
+            conditionMap.put(tag, cv);
+            exchangeMap.put(tag, value);
+
+            cv.sleep();
+
+            int r = exchangeMap.get(tag);
+            exchangeMap.remove(tag);
+            conditionMap.remove(tag);
+
+            lock.release();
+            return r;
+        }
     }
+
+    public static void rendezTest1() {
+        final Rendezvous r = new Rendezvous();
+
+        KThread t1 = new KThread(new Runnable() {
+            public void run() {
+                int tag = 0;
+                int send = -1;
+                System.out.println("Thread " + 
+                        KThread.currentThread().getName() + " exchanging " + send);
+                int recv = r.exchange(tag, send);
+                Lib.assertTrue(recv == 1, 
+                        "Was expecting " + 1 + " but received " + recv);
+                System.out.println("Thread " + 
+                        KThread.currentThread().getName() + " received " + recv);
+            }
+        });
+        t1.setName("t1");
+        KThread t2 = new KThread( new Runnable () {
+            public void run() {
+                int tag = 0;
+                int send = 1;
+                System.out.println ("Thread " +
+                        KThread.currentThread().getName() + " exchanging " + send);
+                int recv = r.exchange (tag, send);
+                Lib.assertTrue (recv == -1, 
+                        "Was expecting " + -1 + " but received " + recv);
+                System.out.println ("Thread " +
+                        KThread.currentThread().getName() + " received " + recv);
+            }
+        });
+        t2.setName("t2");
+
+        t1.fork(); t2.fork();
+        t1.join(); t2.join();
+    }
+
+    public static void selfTest() {
+        rendezTest1();
+    }
+
+    private HashMap<Integer, Integer> exchangeMap = null;
+    private HashMap<Integer, Condition2> conditionMap = null;
+    private Lock lock = null;
 }
