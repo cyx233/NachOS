@@ -59,8 +59,9 @@ public class Alarm {
             waitUntilQueue.add(wakeTime);
             wakeUpMap.put(wakeTime, new HashSet<>());
         wakeUpMap.get(wakeTime).add(KThread.currentThread());
-		Machine.interrupt().disable();
+		boolean intStatus = Machine.interrupt().disable();
         KThread.sleep();
+		Machine.interrupt().restore(intStatus);
 	}
 
         /**

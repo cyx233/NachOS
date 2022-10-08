@@ -204,7 +204,7 @@ public class KThread {
 		currentThread.status = statusFinished;
         if(joinThread != null)
             joinThread.ready();
-		sleep();
+		KThread.sleep();
 	}
 
 	/**
@@ -289,8 +289,10 @@ public class KThread {
             return;
         else{
             Lib.assertTrue(joinThread == null);
+            boolean intStatus = Machine.interrupt().disable();
             joinThread = currentThread;
             KThread.sleep();
+            Machine.interrupt().restore(intStatus);
         }
 	}
 
