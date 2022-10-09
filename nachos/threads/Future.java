@@ -16,6 +16,28 @@ public class Future {
      * of invoking <i>function</i>.
      */
     public Future (IntSupplier function) {
+        lock = new Lock();
+        r = new Rendezvous();
+        cv = new Condition2(lock);
+        finished = false;
+
+        KThread sender = new KThread( new Runnable () {
+            public void run() {
+                int ret = function.getAsInt();
+                r.exchange(0, ret);
+            }
+        });
+        KThread receiver = new KThread( new Runnable () {
+            public void run() {
+                ret = r.exchange(0, 0);
+                lock.acquire();
+                finished = true;
+                cv.wakeAll();
+                lock.release();
+            }
+        });
+        sender.fork();
+        receiver.fork();
     }
 
     /**
@@ -28,6 +50,63 @@ public class Future {
      * threads), and it should always return the same value.
      */
     public int get () {
-	return -1;
+        lock.acquire();
+        if(!finished){
+            cv.sleep();
+        }
+        lock.release();
+        return ret;
     }
+    public static void basicTest(){
+        IntSupplier fib = new IntSupplier() {
+                private int previous = 0;
+                private int current = 1;
+
+                public int getAsInt() {
+                int nextValue = this.previous + this.current;
+                this.previous = this.current;
+                this.current = nextValue;
+                return this.previous;
+            }
+        };
+        Future f = new Future(
+            new IntSupplier() {
+                public int getAsInt() {
+                    System.out.println("Future begin");
+                    long t0 = Machine.timer().getTime();
+                    ThreadedKernel.alarm.waitUntil(1000);
+                    long t1 = Machine.timer().getTime();
+                    System.out.println("Future end.");
+                    return (int)(t1-t0);
+                }
+            }
+        );
+        KThread t1 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println(KThread.currentThread().getName()+" Future call");
+                int ret = f.get();
+                System.out.println(KThread.currentThread().getName()+" gets ans: "+ret);
+            }
+        });
+        t1.setName("process 1");
+        KThread t2 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println(KThread.currentThread().getName()+" Future call");
+                int ret = f.get();
+                System.out.println(KThread.currentThread().getName()+" gets ans: "+ret);
+            }
+        });
+        t2.setName("process 2");
+        t1.fork(); t2.fork();
+        t1.join(); t2.join();
+    }
+
+    public static void selfTest(){
+        basicTest();
+    }
+    private Lock lock = null;  
+    private Rendezvous r = null;
+    private Condition2 cv = null;  
+    private Boolean finished = null;  
+    private Integer ret = null;
 }

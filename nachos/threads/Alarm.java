@@ -75,7 +75,7 @@ public class Alarm {
         return wakeUpTimeMap.remove(thread) != null;
 	}
     public static void alarmTest1() {
-        int durations[] = {1*1000000, 2*1000000, 3*1000000, 4*1000000};
+        int durations[] = {1*1000, 2*1000, 3*1000, 4*1000};
         long t0, t1;
         for (int d : durations) {
             t0 = Machine.timer().getTime();
