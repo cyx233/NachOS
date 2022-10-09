@@ -68,7 +68,7 @@ public class Future {
                     long t0 = Machine.timer().getTime();
                     ThreadedKernel.alarm.waitUntil(1000);
                     long t1 = Machine.timer().getTime();
-                    System.out.println("Future end.");
+                    System.out.println("Futuren end. run time: "+(t1-t0));
                     return (int)(t1-t0);
                 }
             }
@@ -76,16 +76,22 @@ public class Future {
         KThread t1 = new KThread( new Runnable () {
             public void run() {
                 System.out.println(KThread.currentThread().getName()+" Future call");
+                long t0 = Machine.timer().getTime();
                 int ret = f.get();
-                System.out.println(KThread.currentThread().getName()+" gets ans: "+ret);
+                long t1 = Machine.timer().getTime();
+                System.out.println(KThread.currentThread().getName()+" wait time: "+(t1-t0));
+                System.out.println(KThread.currentThread().getName()+" ans: "+ret);
             }
         });
         t1.setName("process 1");
         KThread t2 = new KThread( new Runnable () {
             public void run() {
                 System.out.println(KThread.currentThread().getName()+" Future call");
+                long t0 = Machine.timer().getTime();
                 int ret = f.get();
-                System.out.println(KThread.currentThread().getName()+" gets ans: "+ret);
+                long t1 = Machine.timer().getTime();
+                System.out.println(KThread.currentThread().getName()+" wait time: "+(t1-t0));
+                System.out.println(KThread.currentThread().getName()+" ans: "+ret);
             }
         });
         t2.setName("process 2");
