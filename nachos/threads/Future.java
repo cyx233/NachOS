@@ -17,27 +17,19 @@ public class Future {
      */
     public Future (IntSupplier function) {
         lock = new Lock();
-        r = new Rendezvous();
         cv = new Condition2(lock);
         finished = false;
 
-        KThread sender = new KThread( new Runnable () {
+        KThread t = new KThread( new Runnable () {
             public void run() {
-                int ret = function.getAsInt();
-                r.exchange(0, ret);
-            }
-        });
-        KThread receiver = new KThread( new Runnable () {
-            public void run() {
-                ret = r.exchange(0, 0);
+                ret = function.getAsInt();
                 lock.acquire();
                 finished = true;
                 cv.wakeAll();
                 lock.release();
             }
         });
-        sender.fork();
-        receiver.fork();
+        t.fork();
     }
 
     /**
@@ -105,7 +97,6 @@ public class Future {
         basicTest();
     }
     private Lock lock = null;  
-    private Rendezvous r = null;
     private Condition2 cv = null;  
     private Boolean finished = null;  
     private Integer ret = null;
