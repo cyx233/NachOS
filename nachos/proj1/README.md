@@ -49,11 +49,11 @@ public boolean cancel(KThread thread) {
     return wakeUpTimeMap.remove(thread) != null;
 }
 ```
-Use a HashMap wakeUpTimeMap to save alart events as KThread-timestamp pairs. 
+Use a ```HashMap wakeUpTimeMap``` to save alart events as KThread-TimeStamp pairs. 
 
-In every timerInterrupt, traversal the list, and set ready status to threads whose TimeStamp is earlier than current. These Threads will continue in line (a).
+In every timerInterrupt, traversal the list, and set ready status to threads whose TimeStamp is earlier than current. These threads will continue in **line (a)**.
 
-Canceling an alarm events is removing a Kthread-timestamp pair from the wakeUpTimeMap directly.
+Canceling an alarm events is removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly.
 
 ### KThread.join 
 ```java
@@ -80,8 +80,8 @@ public void join() {
     }
 }
 ```
-Use a private variable of joined thread B to save the current thread A. Then set the current thread to sleep status.
-In finish() function of Thread B, awake the Thread A. A will continue in line (a).
+Use a private variable of joined thread B to save the current thread A. Then set the Thread A to sleep status.
+In finish() function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
 
 ### Condition2
 ```java
@@ -140,11 +140,11 @@ public void wakeAll() {
 }
 
 ```
-Use a LinkedList waitQueue to save waiting threads.
+Use a ```LinkedList waitQueue``` to save waiting threads.
 
-sleep() will call Kthread.sleep() in line (a). Threads must be waked by wake() or wakeAll().
+```sleep()``` will call ```Kthread.sleep()``` in **line (a)**. Threads must be waked by ```wake()``` or ```wakeAll()```.
 
-sleepFor() will call Alarm.waitUntil() in line (b). In this case, threads can be waked by both wake(), wakeAll() and alarm events. A Thread that have called sleepFor() will try to remove itself from the waitQueue when it is waked.
+```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be waked by both ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that have called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is waked.
 
 ### Rendezvous
 ```java
@@ -178,11 +178,11 @@ public int exchange (int tag, int value) {
     }
 }
 ```
-The exchangeMap saves Tag-Value pairs. The conditionMap saves tag-Condition Variable pairs.
+The ```exchangeMap``` saves Tag-Value pairs. The ```conditionMap``` saves tag-Condition Variable pairs.
 
-When the first thread A call exchange(), the tag-value will be saved in the exchangeMap, and a Condition2 will be create and be saved in the conditionMap.
+When the first thread A call ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
 
-When the second thread B call exchange(), it will get value from the exchangeMap and store it in local variable r, then Thread B changes the exchangeMap with its tag-value pair. Finally, it will wake up ThreadA in line (b). Thread A will continue in line (a). Thread A will get value from the exchangeMap that has been modified by Thread B.
+When the second thread B call ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
 
 ### Future
 ```java
@@ -216,10 +216,10 @@ public int get () {
     return ret;
 }
 ```
-Implemented by Condition2. The finished shows whether the result is available.
+Implemented by ```Condition2```. The ```finished``` shows whether the result is available.
 
-When a Future is created, it will start a child thread T for the given function.
+When a ```Future``` is created, it will start a child thread T for the given function.
 
-Before finishing, all threads will wait in line (a).
+Before finishing, all threads will wait in **line (a)**.
 
-When the Thread T finish the given function,  it will changed the ret, finished. Then in line (b), Thread T wakes up all waiting threads. These threads continue in line (a).
+When the Thread T finish the given function,  it will changed the ```ret```, ```finished```. Then in **line (b)**, Thread T wakes up all waiting threads. These threads continue in **line (a)**.
