@@ -142,9 +142,9 @@ public void wakeAll() {
 ```
 Use a ```LinkedList waitQueue``` to save waiting threads.
 
-```sleep()``` will call ```Kthread.sleep()``` in **line (a)**. Threads must be waked by ```wake()``` or ```wakeAll()```.
+```sleep()``` will call ```Kthread.sleep()``` in **line (a)**. Threads must be woke by ```wake()``` or ```wakeAll()```.
 
-```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be waked by both ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that have called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is waked.
+```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by both ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that have called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woke.
 
 ### Rendezvous
 ```java

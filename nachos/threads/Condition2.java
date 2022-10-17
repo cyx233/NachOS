@@ -188,10 +188,25 @@ public class Condition2 {
         lock.release();
     }
 
+    private static void sleepForTest2 () {
+        Lock lock = new Lock();
+        Condition2 cv = new Condition2(lock);
+
+        lock.acquire();
+        long t0 = Machine.timer().getTime();
+        System.out.println (KThread.currentThread().getName() + " sleeping");
+        cv.sleepFor(2000);
+        long t1 = Machine.timer().getTime();
+        System.out.println (KThread.currentThread().getName() + " should be removed waitQueue now: " + !cv.waitQueue.contains(KThread.currentThread()));
+		Lib.assertTrue(!cv.waitQueue.contains(KThread.currentThread()));
+        lock.release();
+    }
+
     public static void selfTest() {
         new InterlockTest();
         cvTest5();
         sleepForTest1();
+        sleepForTest2();
     }
 
     private Lock conditionLock;
