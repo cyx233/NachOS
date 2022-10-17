@@ -95,6 +95,7 @@ public class Condition2 {
         Machine.interrupt().restore(intStatus);
 
 		conditionLock.acquire();
+        waitQueue.remove(KThread.currentThread());
 	}
 
     private static class InterlockTest {
