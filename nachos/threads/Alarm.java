@@ -72,21 +72,62 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
     public boolean cancel(KThread thread) {
-        return wakeUpTimeMap.remove(thread) != null;
+        boolean ret = wakeUpTimeMap.remove(thread) != null;
+        if(ret){
+            boolean intStatus = Machine.interrupt().disable();
+            thread.ready();
+            Machine.interrupt().restore(intStatus);
+        }
+        return ret;
 	}
-    public static void alarmTest1() {
-        int durations[] = {1*1000, 2*1000, 3*1000, 4*1000};
+
+    public static void waitUntilTest() {
+        int durations[] = {1*1000, 2*1000, 3*1000};
         long t0, t1;
+        System.out.println ("waitUntilTest:");
         for (int d : durations) {
             t0 = Machine.timer().getTime();
-            ThreadedKernel.alarm.waitUntil (d);
+            ThreadedKernel.alarm.waitUntil(d);
             t1 = Machine.timer().getTime();
-            System.out.println ("alarmTest1: waited for " + (t1 - t0) + " ticks");
+            System.out.println ("waited for " + (t1 - t0) + " ticks");
         }
+        System.out.println ("waitUntilTest end.");
     }
 
+    public static void cancelTest() {
+        int d = 1000;
+        System.out.println("cancelTest:");
+        KThread t1 = new KThread( new Runnable () {
+            public void run() {
+                long t0 = Machine.timer().getTime();
+                ThreadedKernel.alarm.waitUntil(d);
+                long t1 = Machine.timer().getTime();
+                Lib.assertTrue((t1-t0)>=d);
+                System.out.println ("without cancel(), waited for " + (t1 - t0) + " ticks");
+            }
+        });
+        KThread t2 = new KThread( new Runnable () {
+            public void run() {
+                long t0 = Machine.timer().getTime();
+                ThreadedKernel.alarm.waitUntil(d);
+                long t1 = Machine.timer().getTime();
+                System.out.println ("with cancel(), waited for " + (t1 - t0) + " ticks");
+                Lib.assertTrue((t1-t0)<d);
+            }
+        });
+        t1.fork();
+        KThread.yield();
+        t1.join();
+
+        t2.fork();
+        KThread.yield();
+        ThreadedKernel.alarm.cancel(t2);
+        t2.join();
+        System.out.println("cancelTest end.");
+    }
     public static void selfTest() {
-        alarmTest1();
+        waitUntilTest();
+        cancelTest();
     }
 
     private HashMap<KThread, Long> wakeUpTimeMap = null;

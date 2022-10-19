@@ -58,41 +58,32 @@ public class Rendezvous {
             return r;
         }
     }
+    private static KThread rendezTest1Thread(String name, Rendezvous r, int send, int tag, int target) {
+        KThread t = new KThread(new Runnable() {
+            public void run() {
+                System.out.println("Thread " + 
+                        KThread.currentThread().getName() + " exchanging " + send + " (tag " + tag +")");
+                int recv = r.exchange(tag, send);
+                Lib.assertTrue(recv == target, 
+                        "Was expecting " + target + " but received " + recv);
+                System.out.println("Thread " + 
+                        KThread.currentThread().getName() + " received " + recv);
+            }
+        });
+        t.setName(name);
+        return t;
+    }
 
     public static void rendezTest1() {
+        System.out.println("redezTest:");
         final Rendezvous r = new Rendezvous();
-
-        KThread t1 = new KThread(new Runnable() {
-            public void run() {
-                int tag = 0;
-                int send = -1;
-                System.out.println("Thread " + 
-                        KThread.currentThread().getName() + " exchanging " + send);
-                int recv = r.exchange(tag, send);
-                Lib.assertTrue(recv == 1, 
-                        "Was expecting " + 1 + " but received " + recv);
-                System.out.println("Thread " + 
-                        KThread.currentThread().getName() + " received " + recv);
-            }
-        });
-        t1.setName("t1");
-        KThread t2 = new KThread( new Runnable () {
-            public void run() {
-                int tag = 0;
-                int send = 1;
-                System.out.println ("Thread " +
-                        KThread.currentThread().getName() + " exchanging " + send);
-                int recv = r.exchange (tag, send);
-                Lib.assertTrue (recv == -1, 
-                        "Was expecting " + -1 + " but received " + recv);
-                System.out.println ("Thread " +
-                        KThread.currentThread().getName() + " received " + recv);
-            }
-        });
-        t2.setName("t2");
-
-        t1.fork(); t2.fork();
-        t1.join(); t2.join();
+        KThread t1 = rendezTest1Thread("t1", r, 1, 0, -1);
+        KThread t2 = rendezTest1Thread("t2", r, -1, 0, 1);
+        KThread t3 = rendezTest1Thread("t3", r, 2, 1, -2);
+        KThread t4 = rendezTest1Thread("t4", r, -2, 1, 2);
+        t1.fork(); t3.fork(); t2.fork(); t4.fork();
+        t1.join(); t2.join(); t3.join(); t4.join();
+        System.out.println("redezTest end");
     }
 
     public static void selfTest() {

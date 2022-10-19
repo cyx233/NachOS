@@ -61,6 +61,7 @@ public class Future {
                 return this.previous;
             }
         };
+        System.out.println("Future Test:");
         Future f = new Future(
             new IntSupplier() {
                 public int getAsInt() {
@@ -97,6 +98,7 @@ public class Future {
         t2.setName("process 2");
         t1.fork(); t2.fork();
         t1.join(); t2.join();
+        System.out.println("Future Test end.");
     }
 
     public static void selfTest(){

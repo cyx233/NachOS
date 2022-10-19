@@ -88,15 +88,18 @@ public class Semaphore {
 	 * Test if this module is working.
 	 */
 	public static void selfTest() {
+        System.out.println("Semaphore Test:");
 		Semaphore ping = new Semaphore(0);
 		Semaphore pong = new Semaphore(0);
 
-		new KThread(new PingTest(ping, pong)).setName("ping").fork();
-
+		KThread t = new KThread(new PingTest(ping, pong));
+        t.setName("ping").fork();
 		for (int i = 0; i < 10; i++) {
 			ping.V();
 			pong.P();
 		}
+        t.join();
+        System.out.println("Semaphore Test end.");
 	}
 
 	private int value;
