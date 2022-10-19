@@ -146,7 +146,7 @@ Use a ```LinkedList waitQueue``` to save waiting threads.
 
 ```sleep()``` will call ```Kthread.sleep()``` in **line (a)**. Threads must be woke by ```wake()``` or ```wakeAll()```.
 
-```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by both ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that have called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woke.
+```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by any of ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that has called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woken.
 
 ### Rendezvous
 ```java
@@ -182,9 +182,9 @@ public int exchange (int tag, int value) {
 ```
 The ```exchangeMap``` saves Tag-Value pairs. The ```conditionMap``` saves tag-Condition Variable pairs.
 
-When the first thread A call ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
+When the first thread A calls ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
 
-When the second thread B call ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
+When the second thread B calls ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
 
 ### Future
 ```java
@@ -224,4 +224,4 @@ When a ```Future``` is created, it will start a child thread T for the given fun
 
 Before finishing, all threads will wait in **line (a)**.
 
-When the Thread T finish the given function,  it will changed the ```ret```, ```finished```. Then in **line (b)**, Thread T wakes up all waiting threads. These threads continue in **line (a)**.
+When the Thread T finishes the given function,  it will change the ```ret``` and  ```finished```. Then in **line (b)**, Thread T wakes up all waiting threads. These threads continue in **line (a)**.
