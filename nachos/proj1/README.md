@@ -50,9 +50,9 @@ public boolean cancel(KThread thread) {
 ```
 Use a ```HashMap wakeUpTimeMap``` to save alart events as KThread-TimeStamp pairs. 
 
-In every timerInterrupt, traversal the list, and set ready status to threads whose TimeStamp is earlier than current. These threads will continue in **line (a)**.
+During every timerInterrupt, traversal the list and set ready status to threads whose TimeStamp is earlier than the current. These threads will continue in **line (a)**.
 
-Canceling an alarm events is removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
+Canceling an alarm events is defined by removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
 
 ### KThread.join 
 ```java
@@ -80,6 +80,7 @@ public void join() {
 }
 ```
 Use a private variable of joined thread B to save the current thread A. Then set the Thread A to sleep status.
+
 In finish() function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
 
 ### Condition2
