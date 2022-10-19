@@ -46,14 +46,20 @@ public void waitUntil(long x) {
 }
 
 public boolean cancel(KThread thread) {
-    return wakeUpTimeMap.remove(thread) != null;
+    boolean ret = wakeUpTimeMap.remove(thread) != null;
+    if(ret){
+        boolean intStatus = Machine.interrupt().disable();
+        thread.ready();
+        Machine.interrupt().restore(intStatus);
+    }
+    return ret;
 }
 ```
 Use a ```HashMap wakeUpTimeMap``` to save alart events as KThread-TimeStamp pairs. 
 
 In every timerInterrupt, traversal the list, and set ready status to threads whose TimeStamp is earlier than current. These threads will continue in **line (a)**.
 
-Canceling an alarm events is removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly.
+Canceling an alarm events is removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
 
 ### KThread.join 
 ```java
@@ -121,8 +127,9 @@ public void wake() {
     boolean intStatus = Machine.interrupt().disable();
     if (!waitQueue.isEmpty()){
         KThread t = waitQueue.removeFirst();
-        t.ready();
-        ThreadedKernel.alarm.cancel(t);
+        if(!ThreadedKernel.alarm.cancel(t)){
+            t.ready();
+        }
     }
     Machine.interrupt().restore(intStatus);
 }
@@ -133,8 +140,9 @@ public void wakeAll() {
     boolean intStatus = Machine.interrupt().disable();
     while (!waitQueue.isEmpty()){
         KThread t = waitQueue.removeFirst();
-        t.ready();
-        ThreadedKernel.alarm.cancel(t);
+        if(!ThreadedKernel.alarm.cancel(t)){
+            t.ready();
+        }
     }
     Machine.interrupt().restore(intStatus);
 }
