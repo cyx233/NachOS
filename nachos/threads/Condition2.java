@@ -192,50 +192,54 @@ public class Condition2 {
         long t1 = Machine.timer().getTime();
         System.out.println(KThread.currentThread().getName() +
                 " woke up, slept for " + (t1 - t0) + " ticks");
-        System.out.println(KThread.currentThread().getName() + " should be removed waitQueue now: " + !cv.waitQueue.contains(KThread.currentThread()));
+        System.out.println(KThread.currentThread().getName() + " should be removed from waitQueue: " + !cv.waitQueue.contains(KThread.currentThread()));
 		Lib.assertTrue(!cv.waitQueue.contains(KThread.currentThread()));
         lock.release();
         System.out.println("sleepForTest end.");
     }
 
-    private static void sleepForWakeTest() {
-        Lock lock = new Lock();
-        Condition2 cv = new Condition2(lock);
+    private static class sleepForWakeTest{
+        private static boolean wakeUp = false;
+        public sleepForWakeTest() {
+            Lock lock = new Lock();
+            Condition2 cv = new Condition2(lock);
 
-        System.out.println("sleepForWakeTest:");
-        KThread t = new KThread( new Runnable () {
-            public void run() {
-                System.out.println(KThread.currentThread().getName() + " sleeping");
-                long t0 = Machine.timer().getTime();
-                lock.acquire();
-                cv.sleepFor(20000);
-                long t1 = Machine.timer().getTime();
-                System.out.println(KThread.currentThread().getName() +
-                        " woke up, slept for " + (t1 - t0) + " ticks");
-                Lib.assertTrue((t1-t0)<20000);
-                System.out.println(KThread.currentThread().getName() + " should be removed from waitQueue: " + !cv.waitQueue.contains(KThread.currentThread()));
-                Lib.assertTrue(!cv.waitQueue.contains(KThread.currentThread()));
-                System.out.println(KThread.currentThread().getName() + " should be removed from Alarm: " + !ThreadedKernel.alarm.cancel(KThread.currentThread()));
-                Lib.assertTrue(!ThreadedKernel.alarm.cancel(KThread.currentThread()));
-                lock.release();
-            }
-        }).setName("child");
-        t.fork();
+            System.out.println("sleepForWakeTest:");
+            KThread t = new KThread( new Runnable () {
+                public void run() {
+                    System.out.println(KThread.currentThread().getName() + " sleeping");
+                    long t0 = Machine.timer().getTime();
+                    lock.acquire();
+                    while(!wakeUp)
+                        cv.sleepFor(20000);
+                    long t1 = Machine.timer().getTime();
+                    System.out.println(KThread.currentThread().getName() +
+                            " woke up, slept for " + (t1 - t0) + " ticks");
+                    Lib.assertTrue((t1-t0)<20000);
+                    System.out.println(KThread.currentThread().getName() + " should be removed from waitQueue: " + !cv.waitQueue.contains(KThread.currentThread()));
+                    Lib.assertTrue(!cv.waitQueue.contains(KThread.currentThread()));
+                    lock.release();
+                }
+            }).setName("child");
+            t.fork();
+            KThread.yield();
 
-        System.out.println("wake up the child");
-        lock.acquire();
-        cv.wake();
-        lock.release();
+            lock.acquire();
+            wakeUp = true;
+            System.out.println("wake up the child");
+            cv.wake();
+            lock.release();
 
-        t.join();
-        System.out.println("sleepForTest end.");
+            t.join();
+            System.out.println("sleepForTest end.");
+        }
     }
 
     public static void selfTest() {
         new InterlockTest();
         cvTest5();
         sleepForTest();
-        sleepForWakeTest();
+        new sleepForWakeTest();
     }
 
     private Lock conditionLock;

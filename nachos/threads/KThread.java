@@ -283,16 +283,15 @@ public class KThread {
 	 */
 	public void join() {
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
+        Lib.assertTrue(joinThread == null);
 
 		Lib.assertTrue(this != currentThread);
         if(status == statusFinished)
             return;
         else{
-            Lib.assertTrue(joinThread == null);
             boolean intStatus = Machine.interrupt().disable();
             joinThread = currentThread;
             KThread.sleep();
-            joinThread = null;
             Machine.interrupt().restore(intStatus);
         }
 	}
@@ -421,10 +420,8 @@ public class KThread {
         System.out.println("joinTest:");
         KThread child1 = new KThread( new Runnable () {
             public void run() {
-                            System.out.println("I (heart) Nachos!");
-                                    
+                System.out.println("I (heart) Nachos!");
             }
-                    
         } );
         child1.setName("child1").fork();
 
@@ -438,6 +435,50 @@ public class KThread {
         Lib.assertTrue((child1.status == statusFinished), " Expected child1 to be finished.");
         System.out.println("joinTest end.");
     }
+    private static void join2ThreadsTest () {
+        System.out.println("join2ThreadsTest:");
+        KThread child1 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println("I (heart1) Nachos!");
+            }
+        } );
+        child1.setName("child1").fork();
+        KThread child2 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println("I (heart2) Nachos!");
+            }
+        } );
+        child2.setName("child2").fork();
+
+        child1.join();
+        child2.join();
+        System.out.println("After joining, children should be finished.");
+        System.out.println("is it? " + ((child1.status == statusFinished) && (child2.status == statusFinished)));
+        Lib.assertTrue((child1.status == statusFinished), " Expected child1 to be finished.");
+        Lib.assertTrue((child2.status == statusFinished), " Expected child2 to be finished.");
+        System.out.println("join2ThreadsTest end.");
+    }
+    private static void joinSelfErrorTest() {
+        System.out.println("joinSelfErrorTest:");
+        currentThread.join();
+    }
+    private static void joinBy2ErrorTest() {
+        System.out.println("joinBy2ErrorTest:");
+        currentThread.join();
+        KThread child1 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println("I (heart) Nachos!");
+            }
+        }).setName("child1");
+        KThread child2 = new KThread( new Runnable () {
+            public void run() {
+                System.out.println(KThread.currentThread.getName() + ": child1.join");
+                child1.join();
+            }
+        }).setName("child2");
+        System.out.println(KThread.currentThread.getName() + ": child1.join");
+        child1.join();
+    }
 
 	/**
 	 * Tests whether this module is working.
@@ -450,6 +491,9 @@ public class KThread {
 		new PingTest(0).run();
         System.out.println("pingTest end.");
         joinTest1();
+        join2ThreadsTest();
+        // joinSelfErrorTest();
+        // joinBy2ErrorTest();
 	}
 
 	private static final char dbgThread = 't';

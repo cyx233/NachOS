@@ -125,9 +125,26 @@ public class Alarm {
         t2.join();
         System.out.println("cancelTest end.");
     }
+    public static void cancelTwiceTest() {
+        int d = 1000;
+        System.out.println("cancelTwiceTest:");
+        KThread t1 = new KThread( new Runnable () {
+            public void run() {
+                ThreadedKernel.alarm.waitUntil(d);
+            }
+        });
+        t1.fork();
+        KThread.yield();
+        System.out.println("cancel: " + ThreadedKernel.alarm.cancel(t1));
+        System.out.println("cancel again: " + ThreadedKernel.alarm.cancel(t1));
+        t1.join();
+
+        System.out.println("cancelTwiceTest end.");
+    }
     public static void selfTest() {
         waitUntilTest();
         cancelTest();
+        cancelTwiceTest();
     }
 
     private HashMap<KThread, Long> wakeUpTimeMap = null;
