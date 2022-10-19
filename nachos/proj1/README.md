@@ -81,7 +81,7 @@ public void join() {
 ```
 Use a private variable of joined thread B to save the current thread A. Then set the Thread A to sleep status.
 
-In finish() function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
+In ```finish()``` function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
 
 ### Condition2
 ```java
