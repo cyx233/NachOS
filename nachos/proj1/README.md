@@ -12,13 +12,6 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 - [x] Alarm.cancel, Condition2.sleepFor - Yuxiang Chen
 - [x] Rendezvous.exchange - Yuxiang Chen
 - [x] (Extra) Future.get - Yuxiang Chen
-## Testing
-- [x] Alarm.waitUntil
-- [x] KThread.join
-- [x] Condition2.{sleep, wake, wakeAll}
-- [x] Alarm.cancel, Condition2.sleepFor
-- [x] Rendezvous.exchange
-- [x] (Extra) Future.get
 
 ## Implementation 
 ### Alarm
