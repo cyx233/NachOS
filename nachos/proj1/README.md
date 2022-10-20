@@ -6,7 +6,7 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 |Yuxiang Chen|A59016369|yuc129@ucsd.edu|
 |Jiale Xu|A15123298|jix012@ucsd.edu|
 ## TODO
-- [x] Alarm.waitUntil - Yuxiang
+- [x] Alarm.waitUntil - Yuxiang, Jiale
 - [x] KThread.join - Yuxiang
 - [x] Condition2.{sleep, wake, wakeAll} - Yuxiang Chen
 - [x] Alarm.cancel, Condition2.sleepFor - Yuxiang Chen
@@ -49,10 +49,10 @@ public boolean cancel(KThread thread) {
 }
 ```
 Use a ```HashMap wakeUpTimeMap``` to save alart events as KThread-TimeStamp pairs. 
-
 During every timerInterrupt, traversal the list and set ready status to threads whose TimeStamp is earlier than the current. These threads will continue in **line (a)**.
-
 Canceling an alarm events is defined by removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
+
+```Alarm``` class is tested as follows: ```waitUntil``` is tested with four inputs including negative waiting time which is handled by simply returning. ```cancel``` is tested with two cases: simple cancel and cancel twice. The latter test makes sure that after a thread has been cancelled, cancelling it again does not cause exceptions.
 
 ### KThread.join 
 ```java
@@ -80,8 +80,9 @@ public void join() {
 }
 ```
 Use a private variable of joined thread B to save the current thread A. Then set the Thread A to sleep status.
-
 In ```finish()``` function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
+
+```KThread.join()```  is tested as follows: 1. Yield and join one KThread; 2. Yield and join two KThreads; 3. Test if join self thread is handled; 4. Make sure join() can be called on a thread at most once.
 
 ### Condition2
 ```java
