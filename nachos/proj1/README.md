@@ -8,10 +8,10 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 ## TODO
 - [x] Alarm.waitUntil - Yuxiang, Jiale
 - [x] KThread.join - Yuxiang
-- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang Chen
-- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang Chen
-- [x] Rendezvous.exchange - Yuxiang Chen
-- [x] (Extra) Future.get - Yuxiang Chen
+- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang
+- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang
+- [x] Rendezvous.exchange - Yuxiang
+- [x] (Extra) Future.get - Yuxiang
 
 ## Implementation 
 ### Alarm
