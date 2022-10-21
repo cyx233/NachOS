@@ -10,7 +10,7 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 - [x] KThread.join - Yuxiang, Jiale
 - [x] Condition2.{sleep, wake, wakeAll} - Yuxiang, Jiale
 - [x] Alarm.cancel, Condition2.sleepFor - Yuxiang, Jiale
-- [x] Rendezvous.exchange - Yuxiang
+- [x] Rendezvous.exchange - Yuxiang, Jiale
 - [x] (Extra) Future.get - Yuxiang
 
 ## Implementation 
