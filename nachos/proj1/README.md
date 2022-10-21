@@ -7,9 +7,9 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 |Jiale Xu|A15123298|jix012@ucsd.edu|
 ## TODO
 - [x] Alarm.waitUntil - Yuxiang, Jiale
-- [x] KThread.join - Yuxiang
-- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang
-- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang
+- [x] KThread.join - Yuxiang, Jiale
+- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang, Jiale
+- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang, Jiale
 - [x] Rendezvous.exchange - Yuxiang
 - [x] (Extra) Future.get - Yuxiang
 
@@ -149,6 +149,8 @@ Use a ```LinkedList waitQueue``` to save waiting threads.
 
 ```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by any of ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that has called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woken.
 
+```Condition2``` is tested as follows: ```InterlockTest``` is intended to check the ```Lock``` class implementation asserts thread lock properly; ``` cvTest5()``` checks that condition values are manipulated correctly; ```sleepForTest()``` checks whether the sleeping time is correct; ```sleepForWakeTest``` checks if KThread can sleep and be waken properly.
+
 ### Rendezvous
 ```java
 private HashMap<Integer, Integer> exchangeMap = null;
@@ -186,6 +188,8 @@ The ```exchangeMap``` saves Tag-Value pairs. The ```conditionMap``` saves tag-Co
 When the first thread A calls ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
 
 When the second thread B calls ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
+
+```Rendezvous``` is tested as follows: ```rendezTest1Thread()``` designed how KThreads are are compared with each other. ```rendezTest1()``` creates the KThread objects to be compared and test the ```exchange()``` function.
 
 ### Future
 ```java
