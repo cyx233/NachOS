@@ -31,6 +31,7 @@ public class Alarm {
 	 * should be run.
 	 */
 	public void timerInterrupt() {
+        boolean intStatus = Machine.interrupt().disable();
         Iterator<Map.Entry<KThread, Long>> it =  wakeUpTimeMap.entrySet().iterator();
         while(it.hasNext()){
             Map.Entry<KThread, Long> record = it.next();
@@ -39,6 +40,7 @@ public class Alarm {
                 it.remove();
             }
         }
+        Machine.interrupt().restore(intStatus);
 		KThread.yield();
 	}
 

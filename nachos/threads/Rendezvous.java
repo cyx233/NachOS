@@ -12,8 +12,8 @@ public class Rendezvous {
      */
     public Rendezvous () {
         lock = new Lock();
-        exchangeMap = new HashMap<Integer, Integer>();
         conditionMap = new HashMap<Integer, Condition2>();
+        exchangeMap = new HashMap<Condition2, Integer>();
     }
 
     /**
@@ -34,10 +34,12 @@ public class Rendezvous {
      */
     public int exchange (int tag, int value) {
         lock.acquire();
-        if(exchangeMap.containsKey(tag)){
-            int r = exchangeMap.get(tag);
-            exchangeMap.put(tag, value);
-            conditionMap.get(tag).wake();
+        if(conditionMap.containsKey(tag)){
+            Condition2 cv = conditionMap.get(tag);
+            cv.wake();
+            int r = exchangeMap.get(cv);
+            exchangeMap.put(cv, value);
+            conditionMap.remove(tag);
 
             lock.release();
             return r;
@@ -46,13 +48,12 @@ public class Rendezvous {
             Condition2 cv = new Condition2(lock);
 
             conditionMap.put(tag, cv);
-            exchangeMap.put(tag, value);
+            exchangeMap.put(cv, value);
 
             cv.sleep();
 
-            int r = exchangeMap.get(tag);
-            exchangeMap.remove(tag);
-            conditionMap.remove(tag);
+            int r = exchangeMap.get(cv);
+            exchangeMap.remove(cv);
 
             lock.release();
             return r;
@@ -86,11 +87,24 @@ public class Rendezvous {
         System.out.println("redezTest end");
     }
 
-    public static void selfTest() {
-        rendezTest1();
+    public static void oddTest() {
+        System.out.println("redezTest:");
+        final Rendezvous r = new Rendezvous();
+        KThread t1 = rendezTest1Thread("t1", r, 1, 0, -1);
+        KThread t2 = rendezTest1Thread("t2", r, -1, 0, 1);
+        KThread t3 = rendezTest1Thread("t3", r, 2, 1, -2);
+        t1.fork(); t3.fork(); t2.fork();
+        t1.join(); t2.join(); t3.join();
+        System.out.println("Error! should be blocked");
     }
 
-    private HashMap<Integer, Integer> exchangeMap = null;
+
+    public static void selfTest() {
+        rendezTest1();
+        // oddTest();
+    }
+
     private HashMap<Integer, Condition2> conditionMap = null;
+    private HashMap<Condition2, Integer> exchangeMap = null;
     private Lock lock = null;
 }
