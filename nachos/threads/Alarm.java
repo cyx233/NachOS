@@ -57,6 +57,8 @@ public class Alarm {
 	 * @see nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
+		if (x < 0)
+		    return;
 		long wakeTime = Machine.timer().getTime() + x;
         wakeUpTimeMap.put(KThread.currentThread(), wakeTime);
 		boolean intStatus = Machine.interrupt().disable();
@@ -84,7 +86,7 @@ public class Alarm {
 	}
 
     public static void waitUntilTest() {
-        int durations[] = {1*1000, 2*1000, 3*1000};
+        int durations[] = {1*1000, 2*1000, 3*1000, -1*1000};
         long t0, t1;
         System.out.println ("waitUntilTest:");
         for (int d : durations) {

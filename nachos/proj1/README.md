@@ -6,12 +6,12 @@ https://cseweb.ucsd.edu/classes/fa22/cse120-a/projects/project1.html
 |Yuxiang Chen|A59016369|yuc129@ucsd.edu|
 |Jiale Xu|A15123298|jix012@ucsd.edu|
 ## TODO
-- [x] Alarm.waitUntil - Yuxiang
-- [x] KThread.join - Yuxiang
-- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang Chen
-- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang Chen
-- [x] Rendezvous.exchange - Yuxiang Chen
-- [x] (Extra) Future.get - Yuxiang Chen
+- [x] Alarm.waitUntil - Yuxiang, Jiale
+- [x] KThread.join - Yuxiang, Jiale
+- [x] Condition2.{sleep, wake, wakeAll} - Yuxiang, Jiale
+- [x] Alarm.cancel, Condition2.sleepFor - Yuxiang, Jiale
+- [x] Rendezvous.exchange - Yuxiang, Jiale
+- [x] (Extra) Future.get - Yuxiang
 
 ## Implementation 
 ### Alarm
@@ -49,10 +49,10 @@ public boolean cancel(KThread thread) {
 }
 ```
 Use a ```HashMap wakeUpTimeMap``` to save alart events as KThread-TimeStamp pairs. 
+During every timerInterrupt, traversal the list and set ready status to threads whose TimeStamp is earlier than the current. These threads will continue in **line (a)**.
+Canceling an alarm events is defined by removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
 
-In every timerInterrupt, traversal the list, and set ready status to threads whose TimeStamp is earlier than current. These threads will continue in **line (a)**.
-
-Canceling an alarm events is removing a Kthread-TimeStamp pair from the ```wakeUpTimeMap``` directly. And then set the status to ready.
+```Alarm``` class is tested as follows: ```waitUntil``` is tested with four inputs including negative waiting time which is handled by simply returning. ```cancel``` is tested with two cases: simple cancel and cancel twice. The latter test makes sure that after a thread has been cancelled, cancelling it again does not cause exceptions.
 
 ### KThread.join 
 ```java
@@ -80,7 +80,9 @@ public void join() {
 }
 ```
 Use a private variable of joined thread B to save the current thread A. Then set the Thread A to sleep status.
-In finish() function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
+In ```finish()``` function of the Thread B, awake the Thread A. The Thread A will continue in **line (a)**.
+
+```KThread.join()```  is tested as follows: 1. Yield and join one KThread; 2. Yield and join two KThreads; 3. Test if join self thread is handled; 4. Make sure join() can be called on a thread at most once.
 
 ### Condition2
 ```java
@@ -145,7 +147,9 @@ Use a ```LinkedList waitQueue``` to save waiting threads.
 
 ```sleep()``` will call ```Kthread.sleep()``` in **line (a)**. Threads must be woke by ```wake()``` or ```wakeAll()```.
 
-```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by both ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that have called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woke.
+```sleepFor()``` will call ```Alarm.waitUntil()``` in **line (b)**. In this case, threads can be woke by any of ```wake()```, ```wakeAll()``` and alarm events ```timerInterrupt()```. A Thread that has called ```sleepFor()``` will try to remove itself from the ```waitQueue``` when it is woken.
+
+```Condition2``` is tested as follows: ```InterlockTest``` is intended to check the ```Lock``` class implementation asserts thread lock properly; ``` cvTest5()``` checks that condition values are manipulated correctly; ```sleepForTest()``` checks whether the sleeping time is correct; ```sleepForWakeTest``` checks if KThread can sleep and be waken properly.
 
 ### Rendezvous
 ```java
@@ -181,9 +185,11 @@ public int exchange (int tag, int value) {
 ```
 The ```exchangeMap``` saves Tag-Value pairs. The ```conditionMap``` saves tag-Condition Variable pairs.
 
-When the first thread A call ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
+When the first thread A calls ```exchange()```, the tag-value will be saved in the ```exchangeMap```, and a ```Condition2``` will be create and be saved in the ```conditionMap```.
 
-When the second thread B call ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
+When the second thread B calls ```exchange()```, it will get value from the ```exchangeMap``` and store it in local variable ```r```, then Thread B modifies the ```exchangeMap``` with its tag-value pair. Finally, it will wake up Thread A in **line (b)**. Thread A will continue in **line (a)**. And Thread A will get value from the ```exchangeMap``` that has been modified by Thread B.
+
+```Rendezvous``` is tested as follows: ```rendezTest1Thread()``` designed how KThreads are are compared with each other. ```rendezTest1()``` creates the KThread objects to be compared and test the ```exchange()``` function.
 
 ### Future
 ```java
@@ -223,4 +229,4 @@ When a ```Future``` is created, it will start a child thread T for the given fun
 
 Before finishing, all threads will wait in **line (a)**.
 
-When the Thread T finish the given function,  it will changed the ```ret```, ```finished```. Then in **line (b)**, Thread T wakes up all waiting threads. These threads continue in **line (a)**.
+When the Thread T finishes the given function,  it will change the ```ret``` and  ```finished```. Then in **line (b)**, Thread T wakes up all waiting threads. These threads continue in **line (a)**.
