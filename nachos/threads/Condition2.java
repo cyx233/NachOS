@@ -88,12 +88,12 @@ public class Condition2 {
     public void sleepFor(long timeout) {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-
 		boolean intStatus = Machine.interrupt().disable();
         waitQueue.add(KThread.currentThread());
 		conditionLock.release();
         ThreadedKernel.alarm.waitUntil(timeout);
         waitQueue.remove(KThread.currentThread());
+        System.out.println(waitQueue);
         Machine.interrupt().restore(intStatus);
 
 		conditionLock.acquire();
