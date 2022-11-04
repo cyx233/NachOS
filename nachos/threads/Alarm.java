@@ -76,12 +76,12 @@ public class Alarm {
 	 * @param thread the thread whose timer should be cancelled.
 	 */
     public boolean cancel(KThread thread) {
+        boolean intStatus = Machine.interrupt().disable();
         boolean ret = wakeUpTimeMap.remove(thread) != null;
         if(ret){
-            boolean intStatus = Machine.interrupt().disable();
             thread.ready();
-            Machine.interrupt().restore(intStatus);
         }
+        Machine.interrupt().restore(intStatus);
         return ret;
 	}
 

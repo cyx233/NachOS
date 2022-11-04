@@ -51,7 +51,7 @@ public class Condition2 {
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-            boolean intStatus = Machine.interrupt().disable();
+        boolean intStatus = Machine.interrupt().disable();
         if (!waitQueue.isEmpty()){
             KThread t = waitQueue.removeFirst();
             if(!ThreadedKernel.alarm.cancel(t)){
@@ -95,9 +95,9 @@ public class Condition2 {
 		conditionLock.release();
         ThreadedKernel.alarm.waitUntil(timeout);
         Machine.interrupt().restore(intStatus);
+        waitQueue.remove(KThread.currentThread());
 
 		conditionLock.acquire();
-        waitQueue.remove(KThread.currentThread());
 	}
 
     private static class InterlockTest {
