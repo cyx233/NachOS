@@ -295,6 +295,9 @@ public class KThread {
             Machine.interrupt().restore(intStatus);
         }
 	}
+	public boolean isSleep() {
+        return status == statusBlocked;
+    }
 
 	/**
 	 * Create the idle thread. Whenever there are no threads ready to be run,
