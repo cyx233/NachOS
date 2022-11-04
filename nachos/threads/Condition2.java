@@ -94,8 +94,8 @@ public class Condition2 {
 		boolean intStatus = Machine.interrupt().disable();
 		conditionLock.release();
         ThreadedKernel.alarm.waitUntil(timeout);
-        Machine.interrupt().restore(intStatus);
         waitQueue.remove(KThread.currentThread());
+        Machine.interrupt().restore(intStatus);
 
 		conditionLock.acquire();
 	}
