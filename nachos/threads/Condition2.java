@@ -53,7 +53,7 @@ public class Condition2 {
         boolean intStatus = Machine.interrupt().disable();
         if (!waitQueue.isEmpty()){
             KThread t = waitQueue.removeFirst();
-            if(!ThreadedKernel.alarm.cancel(t)){
+            if(!ThreadedKernel.alarm.cancel(t) && t.isSleep()){
                 t.ready();
             }
         }
