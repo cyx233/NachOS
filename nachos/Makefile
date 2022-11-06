@@ -56,6 +56,9 @@ nachos/%.class: ../%.java
 clean:
 	rm -f */*/*.class
 
+testclean:
+	cd ../test; make clean
+
 allclean:
 	cd test; make clean
 	rm -f *~

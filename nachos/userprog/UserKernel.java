@@ -4,6 +4,8 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
+import java.util.LinkedList;
+
 /**
  * A kernel that can support multiple user processes.
  */
@@ -29,6 +31,11 @@ public class UserKernel extends ThreadedKernel {
 				exceptionHandler();
 			}
 		});
+        lock = new Lock();
+		int numPhysPages = Machine.processor().getNumPhysPages();
+        emptyPPN = new LinkedList<Integer>();
+        for(int i=0; i<numPhysPages; ++i)
+            emptyPPN.add(i);
 	}
 
 	/**
@@ -109,7 +116,7 @@ public class UserKernel extends ThreadedKernel {
 
 		}
 
-		KThread.currentThread().finish();
+		KThread.finish();
 	}
 
 	/**
@@ -119,9 +126,26 @@ public class UserKernel extends ThreadedKernel {
 		super.terminate();
 	}
 
+    public static Integer getPPN(){
+        lock.acquire();
+        Integer r = emptyPPN.poll();
+        lock.release();
+        return r;
+    }
+
+    public static void releasePPN(int ppn){
+        lock.acquire();
+        emptyPPN.add(ppn);
+        lock.release();
+    }
+
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
+
+    private static LinkedList<Integer> emptyPPN;
+
+    private static Lock lock;
 }
