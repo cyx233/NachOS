@@ -57,13 +57,6 @@ public class UThread extends KThread {
 		process.restoreState();
 	}
 
-	public static void finish() {
-        UserProcess p = UserKernel.currentProcess();
-        if(p != null)
-            p.releaseMem();
-        KThread.finish();
-    }
-
 	/**
 	 * Storage for the user register set.
 	 * 
@@ -79,4 +72,5 @@ public class UThread extends KThread {
 	 * The process to which this thread belongs.
 	 */
 	public UserProcess process;
+
 }

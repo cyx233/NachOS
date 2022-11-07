@@ -139,6 +139,12 @@ public class UserKernel extends ThreadedKernel {
         lock.release();
     }
 
+    public static int getEmptyPPN(){
+        return emptyPPN.size();
+    }
+
+
+
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 

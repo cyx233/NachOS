@@ -28,6 +28,7 @@ public class UserProcess {
 	public UserProcess() {
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
+        childProcesses = new HashMap<Integer, UserProcess>();
         emptyFD = new LinkedList<Integer>();
         for (int i=2; i<maxOpenFiles; i++){
             emptyFD.add(i);
@@ -44,7 +45,7 @@ public class UserProcess {
 	 * @return a new process of the correct class.
 	 */
 	public static UserProcess newUserProcess() {
-	        String name = Machine.getProcessClassName ();
+        String name = Machine.getProcessClassName ();
 
 		// If Lib.constructObject is used, it quickly runs out
 		// of file descriptors and throws an exception in
@@ -78,7 +79,15 @@ public class UserProcess {
 		return true;
 	}
 
-	public void releaseMem() {
+	public void clean() {
+        Lib.debug(dbgProcess, "before clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount()+", Empty PPN:"+UserKernel.getEmptyPPN());
+        for(OpenFile f : fileTable)
+            if(f != null)
+                f.close();
+        for(TranslationEntry t : pageTable)
+            if(t != null)
+                UserKernel.releasePPN(t.ppn);
+        Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount()+", Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 
 	/**
@@ -151,15 +160,20 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		Lib.assertTrue(offset >= 0 && length >= 0
-				&& offset + length <= data.length);
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+        if(vaddr <= 0){
+            Lib.debug(dbgProcess, "Read NULL pointer");
+            return 0;
+        }
 
 		byte[] memory = Machine.processor().getMemory();
 
-        int vpn = vaddr/ pageSize;
+        int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
-		if (vpn>numPages || !pageTable[vpn].valid)
+        if (vpn>numPages || pageTable[vpn]==null || !pageTable[vpn].valid){
+            Lib.debug(dbgProcess, "Read invalid VPN:"+vpn);
 			return 0;
+        }
         pageTable[vpn].used = true;
         int paddr = pageTable[vpn].ppn*pageSize + vaOffset;
 
@@ -196,15 +210,24 @@ public class UserProcess {
 	 * @return the number of bytes successfully transferred.
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
-		Lib.assertTrue(offset >= 0 && length >= 0
-				&& offset + length <= data.length);
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
+        if(vaddr <= 0){
+            Lib.debug(dbgProcess, "Write NULL pointer");
+            return 0;
+        }
 
 		byte[] memory = Machine.processor().getMemory();
 
-        int vpn = vaddr/ pageSize;
+        int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
-		if (vpn>numPages || !pageTable[vpn].valid || pageTable[vpn].readOnly)
+        if (vpn>numPages || pageTable[vpn]==null || !pageTable[vpn].valid){
+            Lib.debug(dbgProcess, "Write invalid VPN:"+vpn);
 			return 0;
+        }
+        if (pageTable[vpn].readOnly){
+            Lib.debug(dbgProcess, "RO VPN:"+vpn);
+			return 0;
+        }
         pageTable[vpn].used = true;
         pageTable[vpn].dirty = true;
         int paddr = pageTable[vpn].ppn*pageSize + vaOffset;
@@ -227,6 +250,7 @@ public class UserProcess {
 	 */
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
+		Lib.debug(dbgProcess, "args:"+String.join(", ", args));
 
 		OpenFile executable = UserKernel.fileSystem.open(name, false);
 		if (executable == null) {
@@ -255,6 +279,9 @@ public class UserProcess {
 			numPages += section.getLength();
 		}
 
+		if (!loadSections())
+			return false;
+
 		// make sure the argv array will fit in one page
 		byte[][] argv = new byte[args.length][];
 		int argsSize = 0;
@@ -273,14 +300,25 @@ public class UserProcess {
 		initialPC = coff.getEntryPoint();
 
 		// next comes the stack; stack pointer initially points to top of it
+        for(int i=0; i<stackPages; ++i){
+            int vpn = numPages + i;
+
+            Integer ppn = UserKernel.getPPN();
+            if(ppn==null)
+                return false;
+            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+        }
 		numPages += stackPages;
 		initialSP = numPages * pageSize;
 
 		// and finally reserve 1 page for arguments
+        Integer ppn = UserKernel.getPPN();
+        if(ppn==null)
+            return false;
+        pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
 		numPages++;
 
-		if (!loadSections())
-			return false;
+        Lib.debug(dbgProcess, "Total pages:"+numPages);
 
 		// store arguments in last page
 		int entryOffset = (numPages - 1) * pageSize;
@@ -323,21 +361,14 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\tinitializing " + section.getName()
 					+ " section (" + section.getLength() + " pages)");
             
-            int numPhysPages = Machine.processor().getNumPhysPages();
-            for(int i=0; i<numPhysPages; ++i){
-                pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
-            }
-
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
 
-                // Integer ppn = UserKernel.getPPN();
-                // if(ppn==null)
-                //     return false;
-                // pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
-
-				// section.loadPage(i, ppn);
-				section.loadPage(i, vpn);
+                Integer ppn = UserKernel.getPPN();
+                if(ppn==null)
+                    return false;
+                pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
+				section.loadPage(i, ppn);
 			}
 		}
 		return true;
@@ -376,6 +407,10 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
+        if(thread.getID()!=0){
+            Lib.debug(dbgProcess, "Not root, hault failed");
+            return 0;
+        }
 
 		Machine.halt();
 
@@ -383,6 +418,41 @@ public class UserProcess {
 		return 0;
 	}
 
+	private int handleExec(int filenamePointer, int argc, int argvP) {
+        if(argc<0)
+            return -1;
+        String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
+        if(filename==null)
+            return -1;
+        UserProcess child = newUserProcess();
+        byte[] argv = new byte[4*argc];
+        String[] args = new String[argc];
+        if(argc>0){
+            if(readVirtualMemory(argvP, argv) < 4*argc)
+                return -1;
+            for(int i=0; i<argc; ++i){
+                args[i] = readVirtualMemoryString(Lib.bytesToInt(argv, 4*i), maxArgLen);
+                if(args[i]==null)
+                    return -1;
+            }
+        }
+        child.execute(filename, args);
+        childProcesses.put(child.thread.getID(), child);
+        return child.thread.getID();
+	}
+
+	private int handleJoin(int processID, int statusPointer) {
+        UserProcess child = childProcesses.remove(processID);
+        if(child == null)
+            return -1;
+        child.thread.join();
+        if(child.exitCode == null)
+            return 0;
+        if(4 != writeVirtualMemory(statusPointer, Lib.bytesFromInt(child.exitCode)))
+            return -1;
+        else
+            return 1;
+	}
 	/**
 	 * Handle the exit() system call.
 	 */
@@ -392,15 +462,19 @@ public class UserProcess {
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
 
-		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-		// for now, unconditionally terminate with just one process
-		Kernel.kernel.terminate();
+        exitCode = status;
+        clean();
 
+		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
+
+        UThread.finish();
+
+        Lib.assertNotReached("Exit failed");
 		return 0;
 	}
 
-	private int openFile(int pointer, boolean create) {
-        String filename = readVirtualMemoryString(pointer, 256);
+	private int openFile(int filenamePointer, boolean create) {
+        String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
         if(filename == null)
             return -1;
         OpenFile file = UserKernel.fileSystem.open(filename, create);
@@ -413,12 +487,12 @@ public class UserProcess {
 		return fd;
     }
 
-	private int handleCreate(int pointer) {
-        return openFile(pointer, true);
+	private int handleCreate(int filenamePointer) {
+        return openFile(filenamePointer, true);
 	}
 
-	private int handleOpen(int pointer) {
-        return openFile(pointer, false);
+	private int handleOpen(int filenamePointer) {
+        return openFile(filenamePointer, false);
 	}
 
 	private int handleRead(int fd, int bufferPointer, int count) {
@@ -472,8 +546,8 @@ public class UserProcess {
 		return 0;
 	}
 
-	private int handleUnlink(int pointer) {
-        String filename = readVirtualMemoryString(pointer, 256);
+	private int handleUnlink(int filenamePointer) {
+        String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
         if(filename == null || UserKernel.fileSystem.remove(filename))
             return 0;
         return -1;
@@ -549,6 +623,9 @@ public class UserProcess {
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
+        case syscallExec:
+			return handleExec(a0, a1, a2);
+        case syscallJoin:
 		case syscallExit:
 			return handleExit(a0);
         case syscallCreate:
@@ -563,9 +640,9 @@ public class UserProcess {
             return handleClose(a0);
         case syscallUnlink:
             return handleUnlink(a0);
-
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
+            clean();
 			Lib.assertNotReached("Unknown system call!");
 		}
 		return 0;
@@ -592,10 +669,20 @@ public class UserProcess {
 			processor.advancePC();
 			break;
 		case Processor.exceptionPageFault:
+            int vaddr = processor.readRegister(Processor.regBadVAddr);
+            int vpn = vaddr/ pageSize;
+            Lib.debug(dbgProcess, "PageFault:"+vpn);
+            Integer ppn = UserKernel.getPPN();
+            if (vpn>numPages)
+                Lib.assertNotReached("Invalid Virtual Address:" + vaddr);
+            if (ppn == null)
+                Lib.assertNotReached("Memory Limit Error.");
+            numPages += 1;
+            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+            break;
 		default:
-			Lib.debug(dbgProcess, "Unexpected exception: "
-					+ Processor.exceptionNames[cause]);
-			Lib.assertNotReached("Unexpected exception");
+            clean();
+			Lib.assertNotReached("Unexpected exception: " + Processor.exceptionNames[cause]);
 		}
 	}
 
@@ -624,9 +711,15 @@ public class UserProcess {
 
 	private static final int maxOpenFiles = 16;
 
+	private static final int maxArgLen = 256;
+
     private OpenFile[] fileTable = new OpenFile[maxOpenFiles];
 
     private LinkedList<Integer> emptyFD;
 
     private byte[] buffer = new byte[pageSize]; 
+
+    protected Integer exitCode;
+
+    private HashMap<Integer, UserProcess> childProcesses;
 }
