@@ -686,16 +686,7 @@ public class UserProcess {
 			processor.advancePC();
 			break;
 		case Processor.exceptionPageFault:
-            int vaddr = processor.readRegister(Processor.regBadVAddr);
-            int vpn = vaddr/ pageSize;
-            Lib.debug(dbgProcess, "PageFault:"+vpn);
-            Integer ppn = UserKernel.getPPN();
-            if (vpn>numPages)
-                Lib.assertNotReached("Invalid Virtual Address:" + vaddr);
-            if (ppn == null)
-                Lib.assertNotReached("Memory Limit Error.");
-            numPages += 1;
-            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+			Lib.assertNotReached("Page Fault:" + processor.readRegister(Processor.regBadVAddr));
             break;
 		default:
             clean();
