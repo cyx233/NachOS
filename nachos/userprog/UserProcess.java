@@ -557,6 +557,7 @@ public class UserProcess {
 	private int handleClose(int fd) {
         if(fd<0 || fd>=maxOpenFiles || fileTable[fd] == null)
             return -1;
+        fileTable[fd].close();
         fileTable[fd] = null;
         emptyFD.add(fd);
 		return 0;
