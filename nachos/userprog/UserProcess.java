@@ -180,26 +180,27 @@ public class UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
         if(length==0)
             return 0;
-        int vaOffset = vaddr % pageSize;
         int amount = 0;
+
+        int vaOffset = vaddr % pageSize;
         if(vaOffset+length > pageSize){
-            int temp = pageSize-vaOffset;
-            amount += readVirtualMemory(vaddr, data, offset, temp);
-            if(amount < temp)
+            int temp = readVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
+            amount += temp;
+            if(temp < pageSize - vaOffset)
                 return amount;
         }
-		byte[] memory = Machine.processor().getMemory();
 
         while(length-amount>pageSize){
-            int paddr = translate(vaddr+amount, false);
-            if(paddr == -1)
+            int temp = readVirtualMemory(vaddr, data, offset+amount, pageSize);
+            amount += temp;
+            if(temp < pageSize)
                 return amount;
-            System.arraycopy(memory, paddr, data, offset+amount, pageSize);
-            amount += pageSize;
         }
+
         int paddr = translate(vaddr+amount, false);
         if(paddr == -1)
             return amount;
+		byte[] memory = Machine.processor().getMemory();
 		System.arraycopy(memory, paddr, data, offset+amount, length-amount);
 		return length;
 	}
@@ -234,26 +235,27 @@ public class UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
         if(length==0)
             return 0;
-        int vaOffset = vaddr % pageSize;
         int amount = 0;
+
+        int vaOffset = vaddr % pageSize;
         if(vaOffset+length > pageSize){
-            int temp = pageSize-vaOffset;
-            amount += writeVirtualMemory(vaddr, data, offset, temp);
-            if(amount < temp)
+            int temp = writeVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
+            amount += temp;
+            if(temp < pageSize-vaOffset)
                 return amount;
         }
-		byte[] memory = Machine.processor().getMemory();
 
         while(length-amount>pageSize){
-            int paddr = translate(vaddr+amount, true);
-            if(paddr == -1)
+            int temp = writeVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
+            amount += temp;
+            if(temp < pageSize)
                 return amount;
-            System.arraycopy(data, offset+amount, memory, paddr, pageSize);
-            amount += pageSize;
         }
+
         int paddr = translate(vaddr+amount, true);
         if(paddr == -1)
             return amount;
+		byte[] memory = Machine.processor().getMemory();
         System.arraycopy(data, offset+amount, memory, paddr, length-amount);
 		return length;
 	}
