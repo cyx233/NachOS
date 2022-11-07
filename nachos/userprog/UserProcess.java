@@ -30,6 +30,7 @@ public class UserProcess {
 		pageTable = new TranslationEntry[numPhysPages];
         childProcesses = new HashMap<Integer, UserProcess>();
         emptyFD = new LinkedList<Integer>();
+        finished = false;
         for (int i=2; i<maxOpenFiles; i++){
             emptyFD.add(i);
         }
@@ -70,8 +71,11 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the program was successfully executed.
 	 */
 	public boolean execute(String name, String[] args) {
-		if (!load(name, args))
+        if (!load(name, args)){
+            finished = true;
+            cleanMem();
 			return false;
+        }
 
 		thread = new UThread(this);
 		thread.setName(name).fork();
@@ -80,14 +84,25 @@ public class UserProcess {
 	}
 
 	public void clean() {
-        Lib.debug(dbgProcess, "before clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount()+", Empty PPN:"+UserKernel.getEmptyPPN());
+        finished = true;
+        cleanFiles();
+        cleanMem();
+	}
+
+	public void cleanFiles() {
+        Lib.debug(dbgProcess, "before clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount());
         for(OpenFile f : fileTable)
             if(f != null)
                 f.close();
+        Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount());
+	}
+
+	public void cleanMem() {
+        Lib.debug(dbgProcess, "before clean, Empty PPN:"+UserKernel.getEmptyPPN());
         for(TranslationEntry t : pageTable)
             if(t != null)
                 UserKernel.releasePPN(t.ppn);
-        Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount()+", Empty PPN:"+UserKernel.getEmptyPPN());
+        Lib.debug(dbgProcess, "after clean, Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 
 	/**
@@ -445,7 +460,8 @@ public class UserProcess {
         UserProcess child = childProcesses.remove(processID);
         if(child == null)
             return -1;
-        child.thread.join();
+        if(!child.finished)
+            child.thread.join();
         if(child.exitCode == null)
             return 0;
         if(4 != writeVirtualMemory(statusPointer, Lib.bytesFromInt(child.exitCode)))
@@ -626,6 +642,7 @@ public class UserProcess {
         case syscallExec:
 			return handleExec(a0, a1, a2);
         case syscallJoin:
+			return handleJoin(a0, a1);
 		case syscallExit:
 			return handleExit(a0);
         case syscallCreate:
@@ -719,7 +736,9 @@ public class UserProcess {
 
     private byte[] buffer = new byte[pageSize]; 
 
-    protected Integer exitCode;
+    private Integer exitCode;
+
+    private boolean finished;
 
     private HashMap<Integer, UserProcess> childProcesses;
 }
