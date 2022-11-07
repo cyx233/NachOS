@@ -144,7 +144,7 @@ public class UserProcess {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
 		}
-
+        Lib.debug(dbgProcess, "Exceed maxLength = " + maxLength);
 		return null;
 	}
 
