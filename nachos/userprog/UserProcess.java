@@ -139,12 +139,14 @@ public class UserProcess {
 		byte[] bytes = new byte[maxLength + 1];
 
 		int bytesRead = readVirtualMemory(vaddr, bytes);
+        Lib.debug(dbgProcess, "String buffer len:" + bytesRead);
 
 		for (int length = 0; length < bytesRead; length++) {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
 		}
-        Lib.debug(dbgProcess, "Exceed maxLength = " + maxLength);
+        if(bytesRead>257)
+            Lib.debug(dbgProcess, "Exceed maxLength = " + maxLength);
 		return null;
 	}
 
@@ -176,26 +178,30 @@ public class UserProcess {
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
-        if(vaddr <= 0){
-            Lib.debug(dbgProcess, "Read NULL pointer");
+        if(length==0)
             return 0;
+        int vaOffset = vaddr % pageSize;
+        int amount = 0;
+        if(vaOffset+length > pageSize){
+            int temp = pageSize-vaOffset;
+            amount += readVirtualMemory(vaddr, data, offset, temp);
+            if(amount < temp)
+                return amount;
         }
-
 		byte[] memory = Machine.processor().getMemory();
 
-        int vpn = vaddr / pageSize;
-        int vaOffset = vaddr % pageSize;
-        if (vpn>numPages || pageTable[vpn]==null || !pageTable[vpn].valid){
-            Lib.debug(dbgProcess, "Read invalid VPN:"+vpn);
-			return 0;
+        while(length-amount>pageSize){
+            int paddr = translate(vaddr+amount, false);
+            if(paddr == -1)
+                return amount;
+            System.arraycopy(memory, paddr, data, offset+amount, pageSize);
+            amount += pageSize;
         }
-        pageTable[vpn].used = true;
-        int paddr = pageTable[vpn].ppn*pageSize + vaOffset;
-
-		int amount = Math.min(length, memory.length - vaddr);
-		System.arraycopy(memory, paddr, data, offset, amount);
-
-		return amount;
+        int paddr = translate(vaddr+amount, false);
+        if(paddr == -1)
+            return amount;
+		System.arraycopy(memory, paddr, data, offset+amount, length-amount);
+		return length;
 	}
 
 	/**
@@ -226,32 +232,52 @@ public class UserProcess {
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset + length <= data.length);
-        if(vaddr <= 0){
-            Lib.debug(dbgProcess, "Write NULL pointer");
+        if(length==0)
             return 0;
+        int vaOffset = vaddr % pageSize;
+        int amount = 0;
+        if(vaOffset+length > pageSize){
+            int temp = pageSize-vaOffset;
+            amount += writeVirtualMemory(vaddr, data, offset, temp);
+            if(amount < temp)
+                return amount;
         }
-
 		byte[] memory = Machine.processor().getMemory();
 
+        while(length-amount>pageSize){
+            int paddr = translate(vaddr+amount, true);
+            if(paddr == -1)
+                return amount;
+            System.arraycopy(data, offset+amount, memory, paddr, pageSize);
+            amount += pageSize;
+        }
+        int paddr = translate(vaddr+amount, true);
+        if(paddr == -1)
+            return amount;
+        System.arraycopy(data, offset+amount, memory, paddr, length-amount);
+		return length;
+	}
+
+    private int translate(int vaddr, boolean write){
+        if(vaddr <= 0){
+            Lib.debug(dbgProcess, "Access NULL pointer");
+            return -1;
+        }
         int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
         if (vpn>numPages || pageTable[vpn]==null || !pageTable[vpn].valid){
-            Lib.debug(dbgProcess, "Write invalid VPN:"+vpn);
-			return 0;
+            Lib.debug(dbgProcess, "Access invalid VPN:"+vpn);
+			return -1;
         }
-        if (pageTable[vpn].readOnly){
+        if (write && pageTable[vpn].readOnly){
             Lib.debug(dbgProcess, "RO VPN:"+vpn);
-			return 0;
+			return -1;
         }
         pageTable[vpn].used = true;
-        pageTable[vpn].dirty = true;
-        int paddr = pageTable[vpn].ppn*pageSize + vaOffset;
-
-		int amount = Math.min(length, memory.length - paddr);
-		System.arraycopy(data, offset, memory, paddr, amount);
-
-		return amount;
-	}
+        if(write)
+            pageTable[vpn].dirty = true;
+        return pageTable[vpn].ppn*pageSize + vaOffset;
+    }
 
 	/**
 	 * Load the executable with the specified name into this process, and
@@ -493,6 +519,7 @@ public class UserProcess {
         String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
         if(filename == null)
             return -1;
+        Lib.debug(dbgProcess, "open file:"+filename);
         OpenFile file = UserKernel.fileSystem.open(filename, create);
         if(file == null)
             return -1;
