@@ -184,16 +184,8 @@ public class UserProcess {
 
         int vaOffset = vaddr % pageSize;
         if(vaOffset+length > pageSize){
-            int temp = readVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
-            amount += temp;
-            if(temp < pageSize - vaOffset)
-                return amount;
-        }
-
-        while(length-amount>pageSize){
-            int temp = readVirtualMemory(vaddr, data, offset+amount, pageSize);
-            amount += temp;
-            if(temp < pageSize)
+            amount = readVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
+            if(amount < pageSize - vaOffset)
                 return amount;
         }
 
@@ -239,16 +231,8 @@ public class UserProcess {
 
         int vaOffset = vaddr % pageSize;
         if(vaOffset+length > pageSize){
-            int temp = writeVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
-            amount += temp;
-            if(temp < pageSize-vaOffset)
-                return amount;
-        }
-
-        while(length-amount>pageSize){
-            int temp = writeVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
-            amount += temp;
-            if(temp < pageSize)
+            amount = writeVirtualMemory(vaddr, data, offset, pageSize-vaOffset); 
+            if(amount < pageSize-vaOffset)
                 return amount;
         }
 
