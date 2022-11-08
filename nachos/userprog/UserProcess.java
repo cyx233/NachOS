@@ -600,7 +600,7 @@ public class UserProcess {
 
 	private int handleUnlink(int filenamePointer) {
         String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
-        if(filename == null || UserKernel.fileSystem.remove(filename))
+        if(filename != null && UserKernel.fileSystem.remove(filename))
             return 0;
         return -1;
 	}
