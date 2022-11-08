@@ -26,7 +26,7 @@ main (int argc, char *argv[])
     }
 
     char *prog2 = "join.coff";
-    char* temp = "24";
+    char* temp = "1";
     char* args[1] = {temp};
     int pid2 = exec (prog2, 1, args);
 

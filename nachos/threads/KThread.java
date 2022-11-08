@@ -115,10 +115,6 @@ public class KThread {
 		return name;
 	}
 
-    public int getID(){
-        return id;
-    }
-
 	/**
 	 * Get the full name of this thread. This includes its name along with its
 	 * numerical ID. This name is used for debugging purposes only.

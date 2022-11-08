@@ -80,7 +80,7 @@ public class UserProcess {
 		thread = new UThread(this);
 		thread.setName(name).fork();
         int num = UserKernel.processStart();
-        isRoot = num == 1;
+        ID = UserKernel.newID();
 
 		return true;
 	}
@@ -446,7 +446,7 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
-        if(!isRoot){
+        if(ID != 0){
             Lib.debug(dbgProcess, "Not root, hault failed");
             return 0;
         }
@@ -476,8 +476,8 @@ public class UserProcess {
             }
         }
         if(child.execute(filename, args)){
-            childProcesses.put(child.thread.getID(), child);
-            return child.thread.getID();
+            childProcesses.put(child.ID, child);
+            return child.ID;
         }
         else{
             Lib.debug(dbgProcess, "Exec "+filename+" failed, args:"+String.join(" ", args));
@@ -768,5 +768,5 @@ public class UserProcess {
 
     private HashMap<Integer, UserProcess> childProcesses;
 
-    private boolean isRoot;
+    private int ID;
 }
