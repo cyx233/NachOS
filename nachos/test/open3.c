@@ -5,6 +5,7 @@
  */
 
 #include "syscall.h"
+#include "stdio.h"
 
 int main (int argc, char *argv[])
 {
@@ -41,17 +42,20 @@ int main (int argc, char *argv[])
     }
 
     int int_array_16[16] = {0};
+    char *filename3 = "creat1.c";
     for (int i = 0; i < 16; i++) 
     {
-        int_array_16[i] = open(filename1);
+        int_array_16[i] = open(filename3);
         if (int_array[i] == -1)
         {
+	    printf("error open returning -1");
             return -1;
         }
         for (int j = 0; j < i; j++)
         {
-            if (int_array[j] == int_array[i])
+            if (int_array_16[j] == int_array_16[i])
             {
+		printf("file %d has descriptor %d, file %d has descriptor %d, error open returning duplicate file descriptor", i, int_array_16[i], j, int_array_16[j]);
                 return -1;
             }
         }
