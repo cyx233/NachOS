@@ -140,8 +140,7 @@ do_validate (char *fname, char *buffer, char *truth, int len)
     do_close (fd);
 }
 
-int
-main ()
+int main ()
 {
     char buffer[128], *file, *ptr;
     int buflen = 128;

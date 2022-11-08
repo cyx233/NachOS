@@ -143,6 +143,22 @@ public class UserKernel extends ThreadedKernel {
         return emptyPPN.size();
     }
 
+    public static int processStart(){
+        lock.acquire();
+        runningProcess += 1;
+        int r = runningProcess;
+        lock.release();
+        return r;
+    }
+
+    public static int processFinish(){
+        lock.acquire();
+        runningProcess -= 1;
+        int r = runningProcess;
+        lock.release();
+        return r;
+    }
+
 
 
 	/** Globally accessible reference to the synchronized console. */
@@ -154,4 +170,6 @@ public class UserKernel extends ThreadedKernel {
     private static LinkedList<Integer> emptyPPN;
 
     private static Lock lock;
+
+    private static int runningProcess;
 }

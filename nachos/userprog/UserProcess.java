@@ -79,6 +79,8 @@ public class UserProcess {
 
 		thread = new UThread(this);
 		thread.setName(name).fork();
+        int num = UserKernel.processStart();
+        isRoot = num == 1;
 
 		return true;
 	}
@@ -139,7 +141,6 @@ public class UserProcess {
 		byte[] bytes = new byte[maxLength + 1];
 
 		int bytesRead = readVirtualMemory(vaddr, bytes);
-        Lib.debug(dbgProcess, "String buffer len:" + bytesRead);
 
 		for (int length = 0; length < bytesRead; length++) {
 			if (bytes[length] == 0)
@@ -147,6 +148,8 @@ public class UserProcess {
 		}
         if(bytesRead>257)
             Lib.debug(dbgProcess, "Exceed maxLength = " + maxLength);
+        else
+            Lib.debug(dbgProcess, "String buffer load size:" + bytesRead);
 		return null;
 	}
 
@@ -301,13 +304,16 @@ public class UserProcess {
 			if (section.getFirstVPN() != numPages) {
 				coff.close();
 				Lib.debug(dbgProcess, "\tfragmented executable");
+                executable.close();
 				return false;
 			}
 			numPages += section.getLength();
 		}
 
-		if (!loadSections())
+        if (!loadSections()){
+            executable.close();
 			return false;
+        }
 
 		// make sure the argv array will fit in one page
 		byte[][] argv = new byte[args.length][];
@@ -320,6 +326,7 @@ public class UserProcess {
 		if (argsSize > pageSize) {
 			coff.close();
 			Lib.debug(dbgProcess, "\targuments too long");
+            executable.close();
 			return false;
 		}
 
@@ -331,8 +338,10 @@ public class UserProcess {
             int vpn = numPages + i;
 
             Integer ppn = UserKernel.getPPN();
-            if(ppn==null)
+            if(ppn==null){
+                executable.close();
                 return false;
+            }
             pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
         }
 		numPages += stackPages;
@@ -340,8 +349,10 @@ public class UserProcess {
 
 		// and finally reserve 1 page for arguments
         Integer ppn = UserKernel.getPPN();
-        if(ppn==null)
+        if(ppn==null){
+            executable.close();
             return false;
+        }
         pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
 		numPages++;
 
@@ -364,6 +375,7 @@ public class UserProcess {
 			stringOffset += 1;
 		}
 
+        executable.close();
 		return true;
 	}
 
@@ -434,7 +446,7 @@ public class UserProcess {
 	 * Handle the halt() system call.
 	 */
 	private int handleHalt() {
-        if(thread.getID()!=0){
+        if(!isRoot){
             Lib.debug(dbgProcess, "Not root, hault failed");
             return 0;
         }
@@ -463,9 +475,14 @@ public class UserProcess {
                     return -1;
             }
         }
-        child.execute(filename, args);
-        childProcesses.put(child.thread.getID(), child);
-        return child.thread.getID();
+        if(child.execute(filename, args)){
+            childProcesses.put(child.thread.getID(), child);
+            return child.thread.getID();
+        }
+        else{
+            Lib.debug(dbgProcess, "Exec "+filename+" failed, args:"+String.join(" ", args));
+            return -1;
+        }
 	}
 
 	private int handleJoin(int processID, int statusPointer) {
@@ -494,8 +511,12 @@ public class UserProcess {
         clean();
 
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-
-        UThread.finish();
+        
+        int num = UserKernel.processFinish();
+        if(num>0)
+            UThread.finish();
+        else
+            Kernel.kernel.terminate();
 
         Lib.assertNotReached("Exit failed");
 		return 0;
@@ -746,4 +767,6 @@ public class UserProcess {
     private boolean finished;
 
     private HashMap<Integer, UserProcess> childProcesses;
+
+    private boolean isRoot;
 }
