@@ -498,6 +498,16 @@ public class UserProcess {
         else
             return 1;
 	}
+	private void exit() {
+        clean();
+        int num = UserKernel.processFinish();
+        if(num>0)
+            UThread.finish();
+        else
+            Kernel.kernel.terminate();
+        Lib.assertNotReached("Exit failed");
+	}
+
 	/**
 	 * Handle the exit() system call.
 	 */
@@ -506,20 +516,11 @@ public class UserProcess {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
-
         exitCode = status;
         clean();
-
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
-        
-        int num = UserKernel.processFinish();
-        if(num>0)
-            UThread.finish();
-        else
-            Kernel.kernel.terminate();
-
-        Lib.assertNotReached("Exit failed");
-		return 0;
+        exit();
+        return 0;
 	}
 
 	private int openFile(int filenamePointer, boolean create) {
@@ -694,10 +695,8 @@ public class UserProcess {
             return handleUnlink(a0);
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
-            clean();
-			Lib.assertNotReached("Unknown system call!");
+            return -1;
 		}
-		return 0;
 	}
 
 	/**
@@ -721,11 +720,12 @@ public class UserProcess {
 			processor.advancePC();
 			break;
 		case Processor.exceptionPageFault:
-			Lib.assertNotReached("Page Fault:" + processor.readRegister(Processor.regBadVAddr));
+			Lib.debug(dbgProcess,"Page Fault:" + processor.readRegister(Processor.regBadVAddr));
+            exit();
             break;
 		default:
-            clean();
-			Lib.assertNotReached("Unexpected exception: " + Processor.exceptionNames[cause]);
+			Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
+            exit();
 		}
 	}
 
