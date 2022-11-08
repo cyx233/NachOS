@@ -40,5 +40,22 @@ int main (int argc, char *argv[])
         }
     }
 
+    int int_array_16[16] = {0};
+    for (int i = 0; i < 16; i++) 
+    {
+        int_array_16[i] = open(filename1);
+        if (int_array[i] == -1)
+        {
+            return -1;
+        }
+        for (int j = 0; j < i; j++)
+        {
+            if (int_array[j] == int_array[i])
+            {
+                return -1;
+            }
+        }
+    }
+
     return 0;
 }
