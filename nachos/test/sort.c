@@ -46,6 +46,6 @@ main()
       return 1;
   }
 
-  /* if successful, return 0 */
+   /* if successful, return 0 */
   return 0;
 }

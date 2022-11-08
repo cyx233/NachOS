@@ -162,6 +162,15 @@ public class UserKernel extends ThreadedKernel {
         return r;
     }
 
+    public static int newID(){
+        lock.acquire();
+        int r = nextID;
+        nextID += 1;
+        lock.release();
+        return r;
+    }
+
+
 
 
 	/** Globally accessible reference to the synchronized console. */
@@ -175,4 +184,6 @@ public class UserKernel extends ThreadedKernel {
     private static Lock lock;
 
     private static int runningProcess;
+
+    private static int nextID;
 }
