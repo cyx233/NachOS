@@ -140,7 +140,10 @@ public class UserKernel extends ThreadedKernel {
     }
 
     public static int getEmptyPPN(){
-        return emptyPPN.size();
+        lock.acquire();
+        int r = emptyPPN.size();
+        lock.release();
+        return r;
     }
 
     public static int processStart(){
