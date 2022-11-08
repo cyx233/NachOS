@@ -8,22 +8,22 @@
 
 int main (int argc, char *argv[])
 {
-    char *filename1 = "test_filename.txt";
+    char *filename1 = "open1.c";
     int r = open(filename1);
     if (r == -1)
     {
         return -1;
     }
 
-    char *filename2 = 0;
+    char *filename2 = "open2.c";
     r = open(filename2);
     if (r == -1)
     {
         return -1;
     }
 
-    char *array[5] = {"open testing 1", "open testing 2", "open testing 3", "open testing 4", "open testing 5"};
-    int int_array[5] = {0};
+    char *array[3] = {"open1.c", "open2.c", "open3.c"};
+    int int_array[3] = {0};
     for (int i = 0; i < i; i++)
     {
         int_array[i] = open(array[i]);
