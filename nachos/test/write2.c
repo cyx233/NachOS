@@ -19,7 +19,7 @@ int main (int argc, char *argv[])
         }
         str++;
     }
-    char *str = "\nnachos is here\nnachos is there\nI love Nachos\nhere I share\n\n";
+    str = "\nnachos is here\nnachos is there\nI love Nachos\nhere I share\n\n";
     while (*str) {
         int r = write (1, str, 1);
         if (r != 1) {
