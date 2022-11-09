@@ -46,16 +46,16 @@ int main (int argc, char *argv[])
     for (int i = 0; i < 16; i++) 
     {
         int_array_16[i] = open(filename3);
-        if (int_array[i] == -1)
+        if (int_array_16[i] == -1)
         {
-	    printf("error open returning -1");
+	    printf("error open returning -1\n");
             return -1;
         }
         for (int j = 0; j < i; j++)
         {
             if (int_array_16[j] == int_array_16[i])
             {
-		printf("file %d has descriptor %d, file %d has descriptor %d, error open returning duplicate file descriptor", i, int_array_16[i], j, int_array_16[j]);
+		printf("file %d has descriptor %d, file %d has descriptor %d, error open returning duplicate file descriptor\n", i, int_array_16[i], j, int_array_16[j]);
                 return -1;
             }
         }
