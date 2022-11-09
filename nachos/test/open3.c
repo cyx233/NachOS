@@ -40,10 +40,11 @@ int main (int argc, char *argv[])
             }
         }
     }
-
-    int int_array_16[16] = {0};
+	
+    // open extra times to meet the max 16 opened files
+    int int_array_16[11] = {0};
     char *filename3 = "creat1.c";
-    for (int i = 0; i < 16; i++) 
+    for (int i = 0; i < 11; i++) 
     {
         int_array_16[i] = open(filename3);
         if (int_array_16[i] == -1)
