@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 
 	while (*str)
     {
-        int r = read (0, str, 1);
+        int r = read (1, str, 1);
         if ( r <= 1 && r != -1)
         {
             exit(0);

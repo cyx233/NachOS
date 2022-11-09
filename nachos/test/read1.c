@@ -10,12 +10,14 @@ int main(int argc, char** argv)
 {
 	char *filename1 = "temp.txt";
 	int file_descriptor = open(filename1);
-    char *str = "\nintroduction is good\nthreads is ok\nprocess and multiprogramming is unknown\nhave better performance next time\n\n";
+//	printf("managed to open");
+    char *str = "introduction is good, threads is ok, process and multiprogramming is unknown, have better performance next time\n";
 
 	while (*str)
     {
-        int r = read (0, str, 1);
-        if (r != 1)
+        int r = read (file_descriptor, str, 1);
+	write(1, str, 1);
+        if (r == -1)
         {
             printf("failed to read character (r = %d)\n", r);
             exit(-1);

@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 {
     if (read_closed() == -1)
     {
-        printf("exception of writing closed file descriptor is caught");
+        printf("exception of writing closed file descriptor is caught\n");
         exit(0);
     }
     else
@@ -40,8 +40,8 @@ int main(int argc, char** argv)
 
     if (write_closed() == -1) 
     {
-        printf("exception of reading closed file descriptor is caught");
-        exit(-0);
+        printf("exception of reading closed file descriptor is caught\n");
+        exit(0);
     }
     else
     {
