@@ -146,6 +146,7 @@ public class UserProcess {
 			if (bytes[length] == 0)
 				return new String(bytes, 0, length);
 		}
+        Lib.debug(dbgProcess, "Failed to load String");
         if(bytesRead>257)
             Lib.debug(dbgProcess, "Exceed maxLength = " + maxLength);
         else
@@ -529,11 +530,15 @@ public class UserProcess {
             return -1;
         Lib.debug(dbgProcess, "open file:"+filename);
         OpenFile file = UserKernel.fileSystem.open(filename, create);
-        if(file == null)
+        if(file == null){
+            Lib.debug(dbgProcess, "File system error. Failed to open files.");
             return -1;
+        }
         Integer fd = emptyFD.poll();
-        if(fd == null)
+        if(fd == null){
+            Lib.debug(dbgProcess, "Exceed maxOpenFiles="+maxOpenFiles);
             return -1;
+        }
         fileTable[fd] = file;
 		return fd;
     }
