@@ -248,7 +248,7 @@ int main ()
 
     printf ("writing with a buffer that extends beyond the end of the\n");
     printf ("address space.  write should return an error.\n");
-    r = write (fd, (char *) 0, (80 * 1024));
+    r = write (fd, (char *) 1, (80 * 1024));
     if (r > 0) {
 	printf ("...failed (r = %d)\n", r);
 	exit (-8000);
