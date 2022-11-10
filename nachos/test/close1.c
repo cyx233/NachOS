@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     int r = close(1);
     if (r == -1) 
     {
-        exit(0);
+        exit(-1);
     }
 
 	return 0;

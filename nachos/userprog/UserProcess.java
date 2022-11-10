@@ -101,9 +101,11 @@ public class UserProcess {
 
 	public void cleanMem() {
         Lib.debug(dbgProcess, "before clean, Empty PPN:"+UserKernel.getEmptyPPN());
-        for(TranslationEntry t : pageTable)
-            if(t != null)
-                UserKernel.releasePPN(t.ppn);
+        for(int i=0; i<pageTable.length; ++i)
+            if(pageTable[i] != null){
+                UserKernel.releasePPN(pageTable[i].ppn);
+                pageTable[i] = null;
+            }
         Lib.debug(dbgProcess, "after clean, Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 
@@ -595,11 +597,14 @@ public class UserProcess {
 	}
 
 	private int handleClose(int fd) {
-        if(fd<0 || fd>=maxOpenFiles || fileTable[fd] == null)
+        if(fd<0 || fd>=maxOpenFiles || fileTable[fd] == null){
+            Lib.debug(dbgProcess, "invalid fd:" + fd);
             return -1;
+        }
         fileTable[fd].close();
         fileTable[fd] = null;
         emptyFD.add(fd);
+        Lib.debug(dbgProcess, "close file:"+fd);
 		return 0;
 	}
 

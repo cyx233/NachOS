@@ -13,11 +13,11 @@ int main(int argc, char** argv)
 	if (r == -1)
 	{
 	    creat(filename1);
-            r = open(filename1);
-            if (r == -1) 
-            {
+        r = open(filename1);
+        if (r == -1) 
+        {
             return -1;
-            }
+        }
 	}
 
 	return 0;

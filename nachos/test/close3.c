@@ -29,23 +29,13 @@ int write_closed()
 int main(int argc, char** argv)
 {
     if (read_closed() == -1)
-    {
-        printf("exception of writing closed file descriptor is caught\n");
-        exit(0);
-    }
+        printf("exception of reading closed file descriptor is caught\n");
     else
-    {
         exit(-1);
-    }
 
     if (write_closed() == -1) 
-    {
-        printf("exception of reading closed file descriptor is caught\n");
-        exit(0);
-    }
+        printf("exception of writing closed file descriptor is caught\n");
     else
-    {
         exit(-1);
-    }
 	return 0;
 }
