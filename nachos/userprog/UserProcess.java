@@ -31,9 +31,8 @@ public class UserProcess {
         childProcesses = new HashMap<Integer, UserProcess>();
         emptyFD = new LinkedList<Integer>();
         finished = false;
-        for (int i=2; i<maxOpenFiles; i++){
+        for (int i=2; i<maxOpenFiles; i++)
             emptyFD.add(i);
-        }
         fileTable[0] = UserKernel.console.openForReading();
         fileTable[1] = UserKernel.console.openForWriting();
 	}
@@ -530,19 +529,39 @@ public class UserProcess {
         String filename = readVirtualMemoryString(filenamePointer, maxArgLen);
         if(filename == null)
             return -1;
-        Lib.debug(dbgProcess, "open file:"+filename);
-        OpenFile file = UserKernel.fileSystem.open(filename, create);
-        if(file == null){
-            Lib.debug(dbgProcess, "File system error. Failed to open files.");
-            return -1;
+        Integer fd = null;
+        OpenFile file = null;
+        if(filename.substring(0,6).equals("/pipe/")){
+            String pipename = filename.substring(6);
+            Lib.debug(dbgProcess, "open pipe:"+pipename);
+            UserKernel.KernelPipe p = null;
+            if(create)
+                p = UserKernel.createPipe(pipename);
+            else
+                p = UserKernel.openPipe(pipename);
+            if(p == null)
+                return -1;
+            file = new Pipe(pipename, p);
+            fd = emptyFD.poll();
         }
-        Integer fd = emptyFD.poll();
+        else{
+            Lib.debug(dbgProcess, "open file:"+filename);
+            file = UserKernel.fileSystem.open(filename, create);
+            if(file == null){
+                Lib.debug(dbgProcess, "File system error. Failed to open files.");
+                return -1;
+            }
+            fd = emptyFD.poll();
+        }
         if(fd == null){
-            Lib.debug(dbgProcess, "Exceed maxOpenFiles="+maxOpenFiles);
+            if(filename.substring(0,6).equals("/pipe/"))
+                Lib.debug(dbgProcess, "Exceed maxOpenFiles="+maxOpenFiles);
+            else
+                Lib.debug(dbgProcess, "Exceed maxPipes");
             return -1;
         }
         fileTable[fd] = file;
-		return fd;
+        return fd;
     }
 
 	private int handleCreate(int filenamePointer) {
@@ -762,9 +781,9 @@ public class UserProcess {
 
 	private static final char dbgProcess = 'a';
 
-	private static final int maxOpenFiles = 16;
-
 	private static final int maxArgLen = 256;
+
+	private static final int maxOpenFiles = 16;
 
     private OpenFile[] fileTable = new OpenFile[maxOpenFiles];
 
@@ -779,4 +798,55 @@ public class UserProcess {
     private HashMap<Integer, UserProcess> childProcesses;
 
     private int ID;
+
+	private class Pipe extends OpenFile {
+		public Pipe(String name, UserKernel.KernelPipe p) {
+			super(null, name);
+            this.p = p;
+            begin = p.ppn*pageSize;
+		}
+
+		public void close() {
+            UserKernel.closePipe(getName());
+		}
+
+		public int read(byte[] buf, int offset, int length) {
+            p.lock.acquire();
+            while(p.size == 0){
+                p.full.wakeAll();
+                p.empty.sleep();
+            }
+
+            byte[] memory = Machine.processor().getMemory();
+            System.arraycopy(memory, begin, buf, offset, length);
+            p.size -= length; 
+            System.arraycopy(memory, length, memory, begin, p.size);
+
+            p.full.wakeAll();
+            p.lock.release();
+            return length;
+		}
+
+		public int write(byte[] buf, int offset, int length) {
+            p.lock.acquire();
+            int amount = 0;
+            byte[] memory = Machine.processor().getMemory();
+
+            while(amount < length){
+                while(p.size == pageSize){
+                    p.empty.wakeAll();
+                    p.full.sleep();
+                }
+                int writeLen = Math.min(length-amount, pageSize - p.size);
+                System.arraycopy(buf, offset+amount, memory, begin+p.size, writeLen);
+                p.size += writeLen; 
+                amount += writeLen;
+            }
+            p.empty.wakeAll();
+            p.lock.release();
+            return length;
+		}
+        UserKernel.KernelPipe p;
+        int begin;
+	};
 }

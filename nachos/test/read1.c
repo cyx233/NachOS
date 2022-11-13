@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	while (*str)
     {
         int r = read (file_descriptor, str, 1);
-	write(1, str, 1);
+        write(1, str, 1);
         if (r == -1)
         {
             printf("failed to read character (r = %d)\n", r);

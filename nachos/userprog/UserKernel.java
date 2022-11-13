@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.util.LinkedList;
+import java.util.HashMap;
 
 /**
  * A kernel that can support multiple user processes.
@@ -32,6 +33,7 @@ public class UserKernel extends ThreadedKernel {
 			}
 		});
         lock = new Lock();
+        pipeMap = new HashMap<String, KernelPipe>();
 		int numPhysPages = Machine.processor().getNumPhysPages();
         emptyPPN = new LinkedList<Integer>();
         for(int i=0; i<numPhysPages; ++i)
@@ -146,6 +148,46 @@ public class UserKernel extends ThreadedKernel {
         return r;
     }
 
+    public static KernelPipe createPipe(String name){
+        lock.acquire();
+        if(pipeMap.containsKey(name) || pipeMap.size()==maxPipes){
+            lock.release();
+            return null;
+        }
+        Integer ppn = emptyPPN.poll();
+        if(ppn==null){
+            lock.release();
+            return null;
+        }
+        KernelPipe p = new KernelPipe(name, ppn);
+        p.openCount += 1;
+        pipeMap.put(name, p);
+        lock.release();
+        return p;
+    }
+
+    public static KernelPipe openPipe(String name){
+        lock.acquire();
+        KernelPipe p = pipeMap.get(name);
+        lock.release();
+        if(p!=null)
+            p.openCount += 1;
+        return p;
+    }
+
+    public static void closePipe(String name){
+        lock.acquire();
+        KernelPipe p = pipeMap.get(name);
+        if(p!= null){
+            p.openCount -= 1;
+            if(p.openCount == 0){
+                emptyPPN.add(p.ppn);
+                pipeMap.remove(name);
+            }
+        }
+        lock.release();
+    }
+
     public static int processStart(){
         lock.acquire();
         runningProcess += 1;
@@ -170,9 +212,6 @@ public class UserKernel extends ThreadedKernel {
         return r;
     }
 
-
-
-
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
 
@@ -181,9 +220,32 @@ public class UserKernel extends ThreadedKernel {
 
     private static LinkedList<Integer> emptyPPN;
 
+	private static final int maxPipes = 16;
+
+    private static HashMap<String, KernelPipe> pipeMap;
+
     private static Lock lock;
 
     private static int runningProcess;
 
     private static int nextID;
+
+	public static class KernelPipe {
+		public KernelPipe(String name, int ppn) {
+            name = name;
+            this.ppn = ppn;
+            lock = new Lock();
+            empty = new Condition2(lock);
+            full = new Condition2(lock);
+            size = 0;
+            openCount = 0;
+		}
+        public String name;
+        public int ppn;
+        public Condition2 empty;
+        public Condition2 full;
+        public Lock lock;
+        public int size;
+        private int openCount;
+	};
 }
