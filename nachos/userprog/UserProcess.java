@@ -381,7 +381,6 @@ public class UserProcess {
 			stringOffset += 1;
 		}
 
-        coff.close();
         executable.close();
 		return true;
 	}
@@ -411,8 +410,10 @@ public class UserProcess {
 				int vpn = section.getFirstVPN() + i;
 
                 Integer ppn = UserKernel.getPPN();
-                if(ppn==null)
+                if(ppn==null){
+                    coff.close();
                     return false;
+                }
                 pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
 				section.loadPage(i, ppn);
 			}
@@ -524,7 +525,6 @@ public class UserProcess {
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
         exitCode = status;
-        clean();
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
         exit();
         return 0;
