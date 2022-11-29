@@ -33,8 +33,6 @@ public class UserProcess {
         finished = false;
         for (int i=2; i<maxOpenFiles; i++)
             emptyFD.add(i);
-        fileTable[0] = UserKernel.console.openForReading();
-        fileTable[1] = UserKernel.console.openForWriting();
 	}
 
 	/**
@@ -71,11 +69,12 @@ public class UserProcess {
 	 */
 	public boolean execute(String name, String[] args) {
         if (!load(name, args)){
-            finished = true;
-            cleanMem();
+            Lib.debug(dbgProcess, "load failed");
+            clean();
 			return false;
         }
-
+        fileTable[0] = UserKernel.console.openForReading();
+        fileTable[1] = UserKernel.console.openForWriting();
 		thread = new UThread(this);
 		thread.setName(name).fork();
         int num = UserKernel.processStart();
@@ -95,7 +94,8 @@ public class UserProcess {
         for(OpenFile f : fileTable)
             if(f != null)
                 f.close();
-        coff.close();
+        if(coff != null)
+            coff.close();
         Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount());
 	}
 
@@ -295,7 +295,7 @@ public class UserProcess {
 			coff = new Coff(executable);
 		}
 		catch (EOFException e) {
-			executable.close();
+            executable.close();
 			Lib.debug(dbgProcess, "\tcoff load failed");
 			return false;
 		}
@@ -305,17 +305,13 @@ public class UserProcess {
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
 			if (section.getFirstVPN() != numPages) {
-				coff.close();
 				Lib.debug(dbgProcess, "\tfragmented executable");
-                executable.close();
 				return false;
 			}
 			numPages += section.getLength();
 		}
 
         if (!loadSections()){
-			coff.close();
-            executable.close();
 			return false;
         }
 
@@ -328,9 +324,7 @@ public class UserProcess {
 			argsSize += 4 + argv[i].length + 1;
 		}
 		if (argsSize > pageSize) {
-			coff.close();
 			Lib.debug(dbgProcess, "\targuments too long");
-            executable.close();
 			return false;
 		}
 
@@ -343,8 +337,6 @@ public class UserProcess {
 
             Integer ppn = UserKernel.getPPN();
             if(ppn==null){
-                coff.close();
-                executable.close();
                 return false;
             }
             pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
@@ -355,8 +347,6 @@ public class UserProcess {
 		// and finally reserve 1 page for arguments
         Integer ppn = UserKernel.getPPN();
         if(ppn==null){
-            coff.close();
-            executable.close();
             return false;
         }
         pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
@@ -381,7 +371,6 @@ public class UserProcess {
 			stringOffset += 1;
 		}
 
-        executable.close();
 		return true;
 	}
 
@@ -394,7 +383,6 @@ public class UserProcess {
 	 */
 	protected boolean loadSections() {
 		if (numPages > Machine.processor().getNumPhysPages()) {
-			coff.close();
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
@@ -411,7 +399,6 @@ public class UserProcess {
 
                 Integer ppn = UserKernel.getPPN();
                 if(ppn==null){
-                    coff.close();
                     return false;
                 }
                 pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
@@ -524,8 +511,8 @@ public class UserProcess {
 		Machine.autoGrader().finishingCurrentProcess(status);
 		// ...and leave it as the top of handleExit so that we
 		// can grade your implementation.
-        exitCode = status;
 		Lib.debug(dbgProcess, "UserProcess.handleExit (" + status + ")");
+        exitCode = status;
         exit();
         return 0;
 	}
