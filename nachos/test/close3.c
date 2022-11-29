@@ -10,7 +10,8 @@ int read_closed()
 {
     char * filename1 = "temp.txt";
     int r = open(filename1);
-    r = close(r);
+    printf("%d\n",r);
+    close(r);
     char *str = "\nintroduction is good\nthreads is ok\nprocess and multiprogramming is unknown\nhave better performance next time\n\n";
 
     return read(r, str, 1);
@@ -30,8 +31,10 @@ int main(int argc, char** argv)
 {
     if (read_closed() == -1)
         printf("exception of reading closed file descriptor is caught\n");
-    else
+    else{
+        printf("???\n");
         exit(-1);
+    }
 
     if (write_closed() == -1) 
         printf("exception of writing closed file descriptor is caught\n");

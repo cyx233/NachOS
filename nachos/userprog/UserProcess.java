@@ -95,6 +95,7 @@ public class UserProcess {
         for(OpenFile f : fileTable)
             if(f != null)
                 f.close();
+        coff.close();
         Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount());
 	}
 
@@ -313,6 +314,7 @@ public class UserProcess {
 		}
 
         if (!loadSections()){
+			coff.close();
             executable.close();
 			return false;
         }
@@ -341,6 +343,7 @@ public class UserProcess {
 
             Integer ppn = UserKernel.getPPN();
             if(ppn==null){
+                coff.close();
                 executable.close();
                 return false;
             }
@@ -352,6 +355,7 @@ public class UserProcess {
 		// and finally reserve 1 page for arguments
         Integer ppn = UserKernel.getPPN();
         if(ppn==null){
+            coff.close();
             executable.close();
             return false;
         }
@@ -377,6 +381,7 @@ public class UserProcess {
 			stringOffset += 1;
 		}
 
+        coff.close();
         executable.close();
 		return true;
 	}
