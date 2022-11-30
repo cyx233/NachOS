@@ -39,26 +39,50 @@ public class VMProcess extends UserProcess {
 	 * @return <tt>true</tt> if successful.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
-			Lib.debug(dbgProcess, "\tinsufficient physical memory");
-			return false;
-		}
-
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
+
 			Lib.debug(dbgProcess, "\tinitializing " + section.getName()
 					+ " section (" + section.getLength() + " pages)");
             
 			for (int i = 0; i < section.getLength(); i++) {
 				int vpn = section.getFirstVPN() + i;
+
                 Integer ppn = UserKernel.getPPN();
                 if(ppn==null){
                     return false;
                 }
                 pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
+				section.loadPage(i, ppn);
 			}
 		}
+
+		// program counter initially points at the program entry point
+		initialPC = coff.getEntryPoint();
+
+		// next comes the stack; stack pointer initially points to top of it
+        for(int i=0; i<stackPages; ++i){
+            int vpn = numPages + i;
+
+            Integer ppn = UserKernel.getPPN();
+            if(ppn==null){
+                return false;
+            }
+            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+        }
+		numPages += stackPages;
+		initialSP = numPages * pageSize;
+
+		// and finally reserve 1 page for arguments
+        Integer ppn = UserKernel.getPPN();
+        if(ppn==null){
+            return false;
+        }
+
+        pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
+		numPages++;
+
 		return true;
 	}
 
