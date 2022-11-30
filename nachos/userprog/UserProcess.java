@@ -311,9 +311,6 @@ public class UserProcess {
 			numPages += section.getLength();
 		}
 
-        if (!loadSections()){
-			return false;
-        }
 
 		// make sure the argv array will fit in one page
 		byte[][] argv = new byte[args.length][];
@@ -328,29 +325,9 @@ public class UserProcess {
 			return false;
 		}
 
-		// program counter initially points at the program entry point
-		initialPC = coff.getEntryPoint();
-
-		// next comes the stack; stack pointer initially points to top of it
-        for(int i=0; i<stackPages; ++i){
-            int vpn = numPages + i;
-
-            Integer ppn = UserKernel.getPPN();
-            if(ppn==null){
-                return false;
-            }
-            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+        if (!loadSections()){
+			return false;
         }
-		numPages += stackPages;
-		initialSP = numPages * pageSize;
-
-		// and finally reserve 1 page for arguments
-        Integer ppn = UserKernel.getPPN();
-        if(ppn==null){
-            return false;
-        }
-        pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
-		numPages++;
 
         Lib.debug(dbgProcess, "Total pages:"+numPages);
 
@@ -382,11 +359,6 @@ public class UserProcess {
 	 * @return <tt>true</tt> if the sections were successfully loaded.
 	 */
 	protected boolean loadSections() {
-		if (numPages > Machine.processor().getNumPhysPages()) {
-			Lib.debug(dbgProcess, "\tinsufficient physical memory");
-			return false;
-		}
-
 		// load sections
 		for (int s = 0; s < coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
@@ -405,6 +377,32 @@ public class UserProcess {
 				section.loadPage(i, ppn);
 			}
 		}
+
+		// program counter initially points at the program entry point
+		initialPC = coff.getEntryPoint();
+
+		// next comes the stack; stack pointer initially points to top of it
+        for(int i=0; i<stackPages; ++i){
+            int vpn = numPages + i;
+
+            Integer ppn = UserKernel.getPPN();
+            if(ppn==null){
+                return false;
+            }
+            pageTable[vpn] = new TranslationEntry(vpn, ppn, true, false, false, false);
+        }
+		numPages += stackPages;
+		initialSP = numPages * pageSize;
+
+		// and finally reserve 1 page for arguments
+        Integer ppn = UserKernel.getPPN();
+        if(ppn==null){
+            return false;
+        }
+
+        pageTable[numPages] = new TranslationEntry(numPages, ppn, true, false, false, false);
+		numPages++;
+
 		return true;
 	}
 

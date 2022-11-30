@@ -39,7 +39,27 @@ public class VMProcess extends UserProcess {
 	 * @return <tt>true</tt> if successful.
 	 */
 	protected boolean loadSections() {
-		return super.loadSections();
+		if (numPages > Machine.processor().getNumPhysPages()) {
+			Lib.debug(dbgProcess, "\tinsufficient physical memory");
+			return false;
+		}
+
+		// load sections
+		for (int s = 0; s < coff.getNumSections(); s++) {
+			CoffSection section = coff.getSection(s);
+			Lib.debug(dbgProcess, "\tinitializing " + section.getName()
+					+ " section (" + section.getLength() + " pages)");
+            
+			for (int i = 0; i < section.getLength(); i++) {
+				int vpn = section.getFirstVPN() + i;
+                Integer ppn = UserKernel.getPPN();
+                if(ppn==null){
+                    return false;
+                }
+                pageTable[vpn] = new TranslationEntry(vpn, ppn, true, section.isReadOnly(), false, false);
+			}
+		}
+		return true;
 	}
 
 	/**
