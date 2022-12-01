@@ -98,8 +98,10 @@ public class VMKernel extends UserKernel {
             }
             if(target!=null)
                 break;
-            else
-                hasUnPinedPage.sleep();
+            else{
+                Lib.assertTrue(target!=null);
+                // hasUnPinedPage.sleep();
+            }
         }
         lock.release();
 
@@ -150,7 +152,7 @@ public class VMKernel extends UserKernel {
     public static void unPinPage(TranslationEntry e){
         lock.acquire();
         pinedPage.remove(e);
-        hasUnPinedPage.wake();
+        // hasUnPinedPage.wake();
         lock.release();
     }
 
