@@ -245,12 +245,12 @@ public class UserProcess {
         }
         int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
-        if (pageTable[vpn].valid == false){
-            Lib.debug(dbgProcess, "Access invalid VPN:"+vpn);
-			return -1;
-        }
         if (vpn>=numPages || pageTable[vpn]==null){
             Lib.debug(dbgProcess, "VPN is out of space:"+vpn);
+			return -1;
+        }
+        if (pageTable[vpn].valid == false){
+            Lib.debug(dbgProcess, "Access invalid VPN:"+vpn);
 			return -1;
         }
         if (write && pageTable[vpn].readOnly){
@@ -414,11 +414,11 @@ public class UserProcess {
         Lib.debug(dbgProcess, "before clean, Empty PPN:"+UserKernel.getEmptyPPN());
         if(pageTable == null)
             return;
-        for(int i=0; i<pageTable.length; ++i)
-            if(pageTable[i] != null){
-                UserKernel.releasePPN(pageTable[i].ppn);
-                pageTable[i] = null;
-            }
+        for(TranslationEntry e:pageTable)
+        if(e != null && e.valid){
+            UserKernel.releasePPN(e.ppn);
+            e.valid = false;
+        }
         Lib.debug(dbgProcess, "after clean, Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 

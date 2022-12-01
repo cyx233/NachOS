@@ -31,7 +31,6 @@ public class VMKernel extends UserKernel {
         pinedPage = new HashSet<TranslationEntry>();
         swapFile = fileSystem.open("global_swap", true);
         swapTable = new HashMap<TranslationEntry, Integer>();
-        lock = new Lock();
         hasUnPinedPage = new Condition2(lock);
 	}
 
@@ -60,11 +59,12 @@ public class VMKernel extends UserKernel {
                 Lib.assertTrue(false);
 		    }
 		}
-        TranslationEntry[] pt = process.getPageTable();
-        for(int i=0; i<pt.length; ++i)
-            globalPageTable.add(pt[i]);
 		KThread.finish();
 	}
+    public static void addPageTable(TranslationEntry[] pt){
+        for(TranslationEntry e:pt)
+            globalPageTable.add(e);
+    }
 
 	/**
 	 * Terminate this kernel. Never returns.
@@ -75,56 +75,45 @@ public class VMKernel extends UserKernel {
 		super.terminate();
 	}
 
-    public static TranslationEntry getSwapPage(){
+    public static int getSwapPage(){
         lock.acquire();
+
+        while(pinedPage.size() >= Machine.processor().getNumPhysPages())
+            hasUnPinedPage.sleep();
+
         TranslationEntry target = null;
-        for(int i=0; i<globalPageTable.size(); i++){
-            TranslationEntry e = globalPageTable.get(i);
-            if(e!=null && e.valid && !pinedPage.contains(e))
+        while(target == null){
+            if(clockPointer == globalPageTable.size())
+                clockPointer = 0;
+            TranslationEntry e = globalPageTable.get(clockPointer);
+            if(e!=null && e.valid && !pinedPage.contains(e)){
                 if(e.used)
                     e.used = false;
-                else{
+                else
                     target = e;
-                    break;
-                }
-        }
-        while(target == null){
-            for(int i=0; i<globalPageTable.size(); i++){
-                TranslationEntry e = globalPageTable.get(i);
-                if(e!=null && e.valid && !pinedPage.contains(e) && !e.used){
-                    target = e;
-                    break;
-                }
             }
-            if(target!=null)
-                break;
-            else{
-                // Lib.assertTrue(target!=null);
-                hasUnPinedPage.sleep();
-            }
+            clockPointer += 1;
         }
-        lock.release();
 
-        return target;
-    }
-    
-    public static void evictPage(TranslationEntry e){
-        lock.acquire();
-        e.valid = false;
-        if(!e.dirty && (e.readOnly || swapTable.containsKey(e.ppn))){
+        //evict page
+        target.valid = false;
+        if(!target.dirty && (target.readOnly || swapTable.containsKey(target.ppn))){
             lock.release();
-            return;
+            return target.ppn;
         }
-        Integer start = swapTable.get(e);
+        Integer start = swapTable.get(target);
         if(start==null){
             start = swapPointer;
             swapPointer += 1;
+            // Lib.debug('a', ""+swapPointer+" pin:"+KThread.currentThread().getName());
         }
         byte[] memory = Machine.processor().getMemory();
-        int r = swapFile.write(start*pageSize, memory, e.ppn*pageSize, pageSize);
+        int r = swapFile.write(start*pageSize, memory, target.ppn*pageSize, pageSize);
         Lib.assertTrue(r!=-1);
-        swapTable.put(e, start);
+        swapTable.put(target, start);
         lock.release();
+
+        return target.ppn;
     }
     
     public static boolean restorePage(TranslationEntry e){
@@ -145,12 +134,14 @@ public class VMKernel extends UserKernel {
     
     public static void pinPage(TranslationEntry e){
         lock.acquire();
+        // Lib.debug('a', ""+e.ppn+" pin:"+KThread.currentThread().getName());
         pinedPage.add(e);
         lock.release();
     }
 
     public static void unPinPage(TranslationEntry e){
         lock.acquire();
+        // Lib.debug('a', ""+e.ppn+" unpin:"+KThread.currentThread().getName());
         pinedPage.remove(e);
         hasUnPinedPage.wake();
         lock.release();
@@ -173,7 +164,7 @@ public class VMKernel extends UserKernel {
 
 	private static final int pageSize = Processor.pageSize;
 
-    private static Lock lock;
-
     private static Condition2 hasUnPinedPage;
+
+    private static int clockPointer;
 }

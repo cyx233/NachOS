@@ -94,22 +94,22 @@ public class VMProcess extends UserProcess {
 	}
 
     private boolean loadPage(int vpn){
+        // Lib.debug('a', ""+vpn+" load:"+KThread.currentThread().getName());
         if(vpn<0 || vpn >=numPages){
             Lib.debug(dbgProcess,"VPN out of space:"+vpn);
             return false;
         }
         byte[] memory = Machine.processor().getMemory();
-        Integer ppn = UserKernel.getPPN();
-        if(ppn==null){
-            TranslationEntry e = VMKernel.getSwapPage();
-            VMKernel.evictPage(e);
-            ppn = e.ppn;
-        }
+        Integer ppn = VMKernel.getPPN();
+        if(ppn==null)
+            ppn = VMKernel.getSwapPage();
+
         pageTable[vpn].ppn = ppn;
-        pageTable[vpn].valid = true;
 
         VMKernel.pinPage(pageTable[vpn]);
-        if(!VMKernel.restorePage(pageTable[vpn]) && vpn<numPages-stackPages-1)
+        pageTable[vpn].valid = true;
+        boolean restored = VMKernel.restorePage(pageTable[vpn]);
+        if(!restored && vpn<numPages-stackPages-1)
         {
             //coff
             for (int s = 0; s < coff.getNumSections(); s++) {
@@ -130,6 +130,10 @@ public class VMProcess extends UserProcess {
     protected int translate(int vaddr, boolean write){
         int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
+        if (vpn>=numPages){
+            Lib.debug(dbgProcess, "VPN is out of space:"+vpn);
+			return -1;
+        }
         if (!pageTable[vpn].valid && !loadPage(vpn)){
             Lib.debug(dbgProcess, "Cannot load page. VPN:"+vpn);
             return -1;
@@ -163,21 +167,18 @@ public class VMProcess extends UserProcess {
                 return amount;
         }
 
-        int vpn = (vaddr+amount) / pageSize;
-        if (vpn>=numPages){
-            Lib.debug(dbgProcess, "VPN is out of space:"+vpn);
-			return amount;
-        }
-        VMKernel.pinPage(pageTable[vpn]);
-
         int paddr = translate(vaddr+amount, false);
-        if(paddr == -1)
+        if(paddr == -1){
             return amount;
+        }
 		byte[] memory = Machine.processor().getMemory();
-		System.arraycopy(memory, paddr, data, offset+amount, length-amount);
-        pageTable[vpn].used = true;
 
+        int vpn = (vaddr+amount) / pageSize;
+        VMKernel.pinPage(pageTable[vpn]);
+		System.arraycopy(memory, paddr, data, offset+amount, length-amount);
         VMKernel.unPinPage(pageTable[vpn]);
+
+        pageTable[vpn].used = true;
 		return length;
 	}
 
@@ -199,25 +200,31 @@ public class VMProcess extends UserProcess {
                 return amount;
         }
 
-        int vpn = (vaddr+amount) / pageSize;
-        if (vpn>=numPages){
-            Lib.debug(dbgProcess, "VPN is out of space:"+vpn);
-			return amount;
-        }
-        VMKernel.pinPage(pageTable[vpn]);
 
         int paddr = translate(vaddr+amount, true);
-        if(paddr == -1)
+        if(paddr == -1){
             return amount;
+        }
 		byte[] memory = Machine.processor().getMemory();
+        int vpn = (vaddr+amount) / pageSize;
+
+        VMKernel.pinPage(pageTable[vpn]);
         System.arraycopy(data, offset+amount, memory, paddr, length-amount);
+        VMKernel.unPinPage(pageTable[vpn]);
+
         pageTable[vpn].used = true;
         pageTable[vpn].dirty = true;
 
-        VMKernel.unPinPage(pageTable[vpn]);
 
 		return length;
 	}
+
+	public boolean execute(String name, String[] args) {
+        boolean r = super.execute(name, args);
+        if(r)
+            VMKernel.addPageTable(pageTable);
+        return r;
+    }
 
 	private static final int pageSize = Processor.pageSize;
 

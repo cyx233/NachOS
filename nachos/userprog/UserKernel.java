@@ -222,7 +222,7 @@ public class UserKernel extends ThreadedKernel {
 
     private static HashMap<String, KernelPipe> pipeMap;
 
-    private static Lock lock;
+    protected static Lock lock;
 
     private static int runningProcess;
 
