@@ -26,8 +26,6 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
         childProcesses = new HashMap<Integer, UserProcess>();
         emptyFD = new LinkedList<Integer>();
         finished = false;
@@ -86,7 +84,7 @@ public class UserProcess {
 	public void clean() {
         finished = true;
         cleanFiles();
-        cleanMem();
+        unloadSections();
 	}
 
 	public void cleanFiles() {
@@ -97,16 +95,6 @@ public class UserProcess {
         if(coff != null)
             coff.close();
         Lib.debug(dbgProcess, "after clean, OpenFiles:"+UserKernel.fileSystem.getOpenCount());
-	}
-
-	public void cleanMem() {
-        Lib.debug(dbgProcess, "before clean, Empty PPN:"+UserKernel.getEmptyPPN());
-        for(int i=0; i<pageTable.length; ++i)
-            if(pageTable[i] != null){
-                UserKernel.releasePPN(pageTable[i].ppn);
-                pageTable[i] = null;
-            }
-        Lib.debug(dbgProcess, "after clean, Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 
 	/**
@@ -250,15 +238,19 @@ public class UserProcess {
 		return length;
 	}
 
-    private int translate(int vaddr, boolean write){
+    protected int translate(int vaddr, boolean write){
         if(vaddr <= 0){
             Lib.debug(dbgProcess, "Access NULL pointer");
             return -1;
         }
         int vpn = vaddr / pageSize;
         int vaOffset = vaddr % pageSize;
-        if (vpn>numPages || pageTable[vpn]==null || !pageTable[vpn].valid){
+        if (pageTable[vpn].valid == false){
             Lib.debug(dbgProcess, "Access invalid VPN:"+vpn);
+			return -1;
+        }
+        if (vpn>=numPages || pageTable[vpn]==null){
+            Lib.debug(dbgProcess, "VPN is out of space:"+vpn);
 			return -1;
         }
         if (write && pageTable[vpn].readOnly){
@@ -335,6 +327,8 @@ public class UserProcess {
 		// and finally reserve 1 page for arguments
 		numPages++;
 
+		pageTable = new TranslationEntry[numPages];
+
         if (!loadSections()){
 			return false;
         }
@@ -409,7 +403,7 @@ public class UserProcess {
         if(ppn==null){
             return false;
         }
-        pageTable[numPages-1] = new TranslationEntry(numPages, ppn, true, false, false, false);
+        pageTable[numPages-1] = new TranslationEntry(numPages-1, ppn, true, false, false, false);
 		return true;
 	}
 
@@ -417,6 +411,15 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+        Lib.debug(dbgProcess, "before clean, Empty PPN:"+UserKernel.getEmptyPPN());
+        if(pageTable == null)
+            return;
+        for(int i=0; i<pageTable.length; ++i)
+            if(pageTable[i] != null){
+                UserKernel.releasePPN(pageTable[i].ppn);
+                pageTable[i] = null;
+            }
+        Lib.debug(dbgProcess, "after clean, Empty PPN:"+UserKernel.getEmptyPPN());
 	}
 
 	/**
@@ -528,7 +531,7 @@ public class UserProcess {
             return -1;
         Integer fd = null;
         OpenFile file = null;
-        if(filename.substring(0,6).equals("/pipe/")){
+        if(filename.length()>6 && filename.substring(0,6).equals("/pipe/")){
             String pipename = filename.substring(6);
             Lib.debug(dbgProcess, "open pipe:"+pipename);
             UserKernel.KernelPipe p = null;
@@ -745,10 +748,6 @@ public class UserProcess {
 			processor.writeRegister(Processor.regV0, result);
 			processor.advancePC();
 			break;
-		case Processor.exceptionPageFault:
-			Lib.debug(dbgProcess,"Page Fault:" + processor.readRegister(Processor.regBadVAddr));
-            exit();
-            break;
 		default:
 			Lib.debug(dbgProcess, "Unexpected exception: " + Processor.exceptionNames[cause]);
             exit();
