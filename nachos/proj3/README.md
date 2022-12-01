@@ -23,12 +23,12 @@
     //when there are too many pined pages, the thread will wait on this condition vairable.
     private static Condition2 hasUnPinedPage;
 
-	  // dummy variables to make javac smarter
-	  private static VMProcess dummy1 = null;
-
-	  private static final char dbgVM = 'v';
-
-	  private static final int pageSize = Processor.pageSize;
+    // dummy variables to make javac smarter
+    private static VMProcess dummy1 = null;
+    
+    private static final char dbgVM = 'v';
+    
+    private static final int pageSize = Processor.pageSize;
 
     
 
