@@ -32,6 +32,7 @@ public class VMKernel extends UserKernel {
         swapFile = fileSystem.open("global_swap", true);
         swapTable = new HashMap<TranslationEntry, Integer>();
         lock = new Lock();
+        hasUnPinedPage = new Condition2(lock);
 	}
 
 	/**
@@ -87,20 +88,21 @@ public class VMKernel extends UserKernel {
                     break;
                 }
         }
-        if(target != null){
-            lock.release();
-            return target;
-        }
-
-        for(int i=0; i<globalPageTable.size(); i++){
-            TranslationEntry e = globalPageTable.get(i);
-            if(e!=null && e.valid && !pinedPage.contains(e) && !e.used){
-                target = e;
-                break;
+        while(target == null){
+            for(int i=0; i<globalPageTable.size(); i++){
+                TranslationEntry e = globalPageTable.get(i);
+                if(e!=null && e.valid && !pinedPage.contains(e) && !e.used){
+                    target = e;
+                    break;
+                }
             }
+            if(target!=null)
+                break;
+            else
+                hasUnPinedPage.sleep();
         }
         lock.release();
-        Lib.assertTrue(target!=null);
+
         return target;
     }
     
@@ -116,7 +118,8 @@ public class VMKernel extends UserKernel {
             start = swapPointer;
             swapPointer += 1;
         }
-        int r = swapFile.write(start*pageSize,Machine.processor().getMemory(),e.ppn*pageSize,pageSize);
+        byte[] memory = Machine.processor().getMemory();
+        int r = swapFile.write(start*pageSize, memory, e.ppn*pageSize, pageSize);
         Lib.assertTrue(r!=-1);
         swapTable.put(e, start);
         lock.release();
@@ -128,8 +131,10 @@ public class VMKernel extends UserKernel {
         byte[] memory = Machine.processor().getMemory();
         if(start == null)
             Arrays.fill(memory, e.ppn*pageSize, (e.ppn+1)*pageSize, (byte)0);
-        else
-            swapFile.read(start*pageSize, memory, e.ppn*pageSize, pageSize);
+        else{
+            int r = swapFile.read(start*pageSize, memory, e.ppn*pageSize, pageSize);
+            Lib.assertTrue(r!=-1);
+        }
         e.used = false;
         e.dirty = false;
         lock.release();
@@ -145,6 +150,7 @@ public class VMKernel extends UserKernel {
     public static void unPinPage(TranslationEntry e){
         lock.acquire();
         pinedPage.remove(e);
+        hasUnPinedPage.wake();
         lock.release();
     }
 
@@ -166,4 +172,6 @@ public class VMKernel extends UserKernel {
 	private static final int pageSize = Processor.pageSize;
 
     private static Lock lock;
+
+    private static Condition2 hasUnPinedPage;
 }
